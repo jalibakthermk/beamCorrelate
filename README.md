@@ -34,6 +34,8 @@ Preset limits (ECE R112 class B low-beam points, high-beam points, cut-off G ≥
 
 ## Dependencies
 
-[Plotly.js](https://plotly.com/javascript/) 2.35.2 from cdnjs and IBM Plex fonts from Google Fonts. No build step.
+[Plotly.js](https://plotly.com/javascript/) 2.35.2, bundled in `vendor/` so charts work offline and behind networks that block CDNs (falls back to cdnjs, then jsDelivr). IBM Plex fonts load from Google Fonts with system-font fallbacks. No build step.
+
+When opening `index.html` directly from disk, keep the `vendor` folder next to it.
 
 © 2026 Jalib Akther

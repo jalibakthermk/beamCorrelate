@@ -71,10 +71,10 @@ button:disabled{opacity:.55;cursor:default}
 .hint{font-size:12px;color:var(--ink-2);margin:6px 0 0}
 .hint.err{color:var(--bad)}
 .main{display:flex;flex-direction:column;gap:14px;min-width:0}
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
-.kpi{background:var(--panel);padding:10px 12px;min-width:0}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.kpi{background:var(--panel);padding:10px 12px;min-width:0;box-shadow:1px 0 0 var(--line),0 1px 0 var(--line)}
 .kpi .k{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
-.kpi .v{font-family:var(--f-mono);font-size:19px;font-weight:500;font-variant-numeric:tabular-nums;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi .v{font-family:var(--f-mono);font-size:18px;font-weight:500;font-variant-numeric:tabular-nums;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .kpi .d{font-size:12px;color:var(--ink-2);font-variant-numeric:tabular-nums}
 .v.good{color:var(--good)} .v.bad{color:var(--bad)} .v.warn{color:var(--warn)}
 .tabs{display:flex;flex-wrap:wrap;gap:4px;border-bottom:1px solid var(--line)}
@@ -262,7 +262,14 @@ footer p{margin:0;max-width:110ch}
 </div>
 <div class="toast" id="toast" hidden></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.35.2/plotly.min.js"></script>
+<script src="vendor/plotly.min.js"></script>
+<script>
+/* Plotly is bundled next to this page; fall back to public CDNs if the local copy is missing or blocked. */
+if (!window.Plotly) document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.35.2/plotly.min.js"><\/script>');
+</script>
+<script>
+if (!window.Plotly) document.write('<script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"><\/script>');
+</script>
 
 <script id="core">
 /* ===== beamCorrelate core: parsing, sampling, comparison (no DOM) ===== */
@@ -840,7 +847,7 @@ const fmtCd = x => !Number.isFinite(x) ? '–' : x >= 100 ? Math.round(x).toLoca
 const fmtPct = (x, d=1) => !Number.isFinite(x) ? '–' : (x >= 0 ? '+' : '−') + Math.abs(x*100).toFixed(d) + '%';
 const fmtAng = (a, pos, neg, zero) => { if (Math.abs(a) < 1e-9) return zero; return (+Math.abs(a).toFixed(2)) + (a > 0 ? pos : neg); };
 const fmtPos = (h, v) => `${fmtAng(v,'U','D','H')} · ${fmtAng(h,'R','L','V')}`;
-const fmtShift = (dh, dv) => `${Math.abs(dh).toFixed(2)}°${dh >= 0 ? 'R' : 'L'}  ${Math.abs(dv).toFixed(2)}°${dv >= 0 ? 'U' : 'D'}`;
+const fmtShift = (dh, dv) => `${Math.abs(dh).toFixed(2)}°${dh >= 0 ? 'R' : 'L'} ${Math.abs(dv).toFixed(2)}°${dv >= 0 ? 'U' : 'D'}`;
 function toast(msg){ const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(() => t.hidden = true, 3200); }
 function tok(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
 
@@ -1060,7 +1067,7 @@ function figSlices(c){
   const fH = { data:[
       { type:'scatter', mode:'lines', x:sl.hh, y:sl.hM.map(x => x > 0 ? x : null), name:'Measured', line:{ color:c.meas, width:2 } },
       { type:'scatter', mode:'lines', x:sl.hh, y:sl.hS.map(x => x > 0 ? x : null), name:'Simulated', line:{ color:c.sim, width:2, dash:'dash' } } ],
-    layout: baseLayout(c, { showlegend:true, legend:{ orientation:'h', y:1.12, x:1, xanchor:'right', font:{ size:11 } }, yaxis:yax, hovermode:'x unified',
+    layout: baseLayout(c, { showlegend:true, legend:{ x:0.01, y:0.98, xanchor:'left', yanchor:'top', bgcolor:'rgba(0,0,0,0)', font:{ size:11 } }, yaxis:yax, hovermode:'x unified',
       title:{ text:`Horizontal scan at V = ${fmtAng(st.sliceV,'U','D','0')}`, font:{ size:13, color:c.ink }, x:0.01, xanchor:'left' } }) };
   const shapes = [sl.gM, sl.gS].map((g, i) => Number.isFinite(g.v) ? { type:'line', x0:g.v, x1:g.v, yref:'paper', y0:0, y1:1, line:{ color: i ? c.sim : c.meas, width:1, dash:'dot' } } : null).filter(Boolean);
   const fV = { data:[
@@ -1088,7 +1095,7 @@ function figCutTrace(c){
   const shapes = cr.scans.map(s => ({ type:'line', x0:s.h, x1:s.h, yref:'paper', y0:0, y1:1, line:{ color:c.ink2, width:1, dash:'dot' } }));
   const all = cr.trM.concat(cr.trS).filter(Number.isFinite);
   const lo = all.length ? Math.min(...all) : -1, hi = all.length ? Math.max(...all) : 1;
-  return { data, layout: baseLayout(c, { showlegend:true, legend:{ orientation:'h', y:1.12, x:1, xanchor:'right', font:{ size:11 } }, shapes,
+  return { data, layout: baseLayout(c, { showlegend:true, legend:{ x:0.01, y:0.98, xanchor:'left', yanchor:'top', bgcolor:'rgba(0,0,0,0)', font:{ size:11 } }, shapes,
     yaxis:{ title:{ text:'cut-off position β (°)', font:{ size:12, color:c.ink2 } }, range:[lo - 0.3, Math.min(hi, lo + 3) + 0.3], gridcolor:c.line, zerolinecolor:c.ink2, linecolor:c.line, ticks:'outside', tickcolor:c.line },
     title:{ text:'Cut-off line: steepest-gradient trace' + (st.cut.simAligned ? '' : ' (simulation as simulated)'), font:{ size:13, color:c.ink }, x:0.01, xanchor:'left' } }) };
 }
@@ -1174,7 +1181,7 @@ function renderViewbar(){
 }
 function renderView(){
   if (!st.res) return;
-  if (!hasPlotly){ $('plots').innerHTML = '<div class="plotbox" style="padding:16px">The plotting library could not load, so charts are unavailable. Statistics and the table below still work.</div>'; return; }
+  if (!hasPlotly){ $('plots').innerHTML = '<div class="plotbox" style="padding:16px">Charts are unavailable because Plotly could not be loaded: the bundled copy (vendor/plotly.min.js) was not found next to this page and the public CDNs were blocked. Keep the vendor folder beside index.html, or open the hosted page. Statistics and the tables still work.</div>'; return; }
   const c = themeColors(false), v = st.view;
   document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.view === v)));
   if (!$('viewbar').dataset.view || $('viewbar').dataset.view !== v){ $('viewbar').dataset.view = v; renderViewbar(); }
