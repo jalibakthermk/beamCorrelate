@@ -1,0 +1,1345 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>html{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>beamCorrelate</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: instrument console. Control rail on the left, measurement canvas on the right; stacks to one column on phones. */
+:root{
+  --bg:#F2F4F3; --panel:#FFFFFF; --sunk:#E9ECEB; --ink:#1B2025; --ink-2:#56616B; --line:#D6DBDD;
+  --meas:#B4530B; --sim:#3B57C4; --good:#22774A; --bad:#B42318; --warn:#9A5B00;
+  --good-bg:#E3F2E8; --bad-bg:#FBE7E5; --warn-bg:#FBF0DA;
+  --div-mid:#F4F2EC; --div-neg:#2F5FB0; --div-pos:#C2410C;
+  --f-display:"IBM Plex Sans Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  --r:8px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121518; --panel:#1A1E22; --sunk:#22272C; --ink:#E5E8EA; --ink-2:#9AA5AF; --line:#2E353B;
+  --meas:#EE9640; --sim:#8FA3F5; --good:#5CC48A; --bad:#F2766B; --warn:#E2B04A;
+  --good-bg:#18301F; --bad-bg:#3A1C1A; --warn-bg:#3A2D12;
+  --div-mid:#24282D; --div-neg:#6F9BEA; --div-pos:#F08A4B; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121518; --panel:#1A1E22; --sunk:#22272C; --ink:#E5E8EA; --ink-2:#9AA5AF; --line:#2E353B;
+  --meas:#EE9640; --sim:#8FA3F5; --good:#5CC48A; --bad:#F2766B; --warn:#E2B04A;
+  --good-bg:#18301F; --bad-bg:#3A1C1A; --warn-bg:#3A2D12;
+  --div-mid:#24282D; --div-neg:#6F9BEA; --div-pos:#F08A4B; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.5}
+.wrap{max-width:1500px;margin:0 auto;padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;padding-bottom:16px;border-bottom:1px solid var(--line);margin-bottom:18px}
+h1{font-family:var(--f-display);font-weight:600;font-size:28px;letter-spacing:-.01em;margin:0;line-height:1.1}
+h1 .b{color:var(--meas)} h1 .c{color:var(--sim)}
+.sub{color:var(--ink-2);margin:4px 0 0;font-size:14px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:4px 10px;border-radius:999px;background:var(--sunk);color:var(--ink-2);border:1px solid var(--line)}
+.chip svg{width:13px;height:13px}
+.app{display:grid;grid-template-columns:330px minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:960px){.app{grid-template-columns:minmax(0,1fr)}}
+.rail{display:flex;flex-direction:column;gap:12px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+.panel h2{font-family:var(--f-display);font-weight:600;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);margin:0 0 10px}
+.ds{display:flex;flex-direction:column;gap:8px}
+.ds + .ds{margin-top:14px;padding-top:14px;border-top:1px dashed var(--line)}
+.ds-head{display:flex;align-items:center;gap:8px;font-weight:600}
+.swatch{width:18px;height:3px;border-radius:2px;flex:none}
+.sw-meas{background:var(--meas)} .sw-sim{background:var(--sim);background:repeating-linear-gradient(90deg,var(--sim) 0 5px,transparent 5px 8px)}
+.ds-info{font-family:var(--f-mono);font-size:12px;color:var(--ink-2);word-break:break-word;min-height:1.4em}
+.ds-info.err{color:var(--bad)}
+.file{position:relative;display:flex}
+.file input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
+.file span{flex:1;text-align:center;padding:7px 10px;border:1px dashed var(--line);border-radius:var(--r);color:var(--ink-2);font-size:13px;background:var(--sunk)}
+.file input:focus-visible + span,.file:hover span{border-color:var(--ink-2);color:var(--ink)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+label.f{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--ink-2);min-width:0}
+input[type=number],select,textarea{font:inherit;font-family:var(--f-mono);font-size:13px;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 8px;width:100%;min-width:0}
+textarea{min-height:170px;resize:vertical;font-size:12px;line-height:1.45}
+input:disabled{color:var(--ink-2);background:var(--sunk)}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px solid var(--sim);outline-offset:1px}
+label.ck{display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer}
+button{font:inherit;font-size:13px;font-weight:500;color:var(--ink);background:var(--sunk);border:1px solid var(--line);border-radius:6px;padding:7px 12px;cursor:pointer}
+button:hover{border-color:var(--ink-2)}
+button.primary{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+button:disabled{opacity:.55;cursor:default}
+.hint{font-size:12px;color:var(--ink-2);margin:6px 0 0}
+.hint.err{color:var(--bad)}
+.main{display:flex;flex-direction:column;gap:14px;min-width:0}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.kpi{background:var(--panel);padding:10px 12px;min-width:0}
+.kpi .k{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
+.kpi .v{font-family:var(--f-mono);font-size:19px;font-weight:500;font-variant-numeric:tabular-nums;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi .d{font-size:12px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.v.good{color:var(--good)} .v.bad{color:var(--bad)} .v.warn{color:var(--warn)}
+.tabs{display:flex;flex-wrap:wrap;gap:4px;border-bottom:1px solid var(--line)}
+.tab{background:none;border:none;border-bottom:2px solid transparent;border-radius:0;padding:8px 12px;color:var(--ink-2)}
+.tab[aria-selected=true]{color:var(--ink);border-bottom-color:var(--ink)}
+.viewbar{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;padding:10px 0 0}
+.viewbar label.f{flex-direction:row;align-items:center;gap:6px}
+.viewbar input[type=number]{width:80px}
+.viewbar select{width:auto}
+.plots{display:grid;gap:12px}
+.plots.two{grid-template-columns:1fr 1fr}
+@media (max-width:1200px){.plots.two{grid-template-columns:minmax(0,1fr)}}
+.plotbox{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);min-width:0;position:relative}
+.plotbox .pt{position:absolute;left:12px;top:8px;font-size:12px;font-weight:600;color:var(--ink-2);z-index:2;pointer-events:none}
+.plot{width:100%;height:440px}
+@media (max-width:640px){.plot{height:340px}}
+.legend-note{font-size:12px;color:var(--ink-2);padding:0 2px}
+.tablewrap{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
+table{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums}
+th,td{padding:7px 10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
+th{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-2);font-weight:600;background:var(--sunk)}
+th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left}
+tbody tr:last-child td{border-bottom:none}
+td.mono{font-family:var(--f-mono)}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px}
+.pill.pass{background:var(--good-bg);color:var(--good)} .pill.fail{background:var(--bad-bg);color:var(--bad)} .pill.na{color:var(--ink-2)}
+.dl.good{color:var(--good)} .dl.warn{color:var(--warn)} .dl.bad{color:var(--bad)}
+.sec-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+.sec-head h3{font-family:var(--f-display);font-weight:600;font-size:17px;margin:0}
+details summary{cursor:pointer;font-size:13px;color:var(--ink-2)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:8px 14px;border-radius:6px;font-size:13px;z-index:50;max-width:calc(100% - 32px)}
+.busy{font-size:12px;color:var(--warn)}
+footer{margin-top:26px;padding-top:14px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-2);display:grid;gap:6px}
+footer p{margin:0;max-width:110ch}
+.code{font-family:var(--f-mono);font-size:12px}
+#viewExtra:empty{display:none}
+#viewExtra .warnline{font-size:12px;color:var(--warn);background:var(--warn-bg);border-radius:6px;padding:6px 10px;margin:0 0 8px}
+.viewbar input[type=text]{font-family:var(--f-mono);font-size:13px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);min-width:0}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>beam<span class="b">Corr</span><span class="c">elate</span></h1>
+      <p class="sub">Simulation vs. goniometer measurement correlation for automotive lamps</p>
+    </div>
+    <span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Files are read on this device and never uploaded</span>
+  </header>
+
+  <div class="app">
+    <aside class="rail">
+      <section class="panel" aria-labelledby="h-func">
+        <h2 id="h-func">Lamp function</h2>
+        <select id="func" aria-label="Lamp function">
+          <optgroup label="Front lighting">
+            <option value="lb_rht" selected>Low beam (RHT)</option>
+            <option value="lb_lht">Low beam (LHT)</option>
+            <option value="hb">High beam</option>
+            <option value="fog">Front fog lamp</option>
+            <option value="corner">Cornering lamp</option>
+          </optgroup>
+          <optgroup label="Signalling">
+            <option value="drl">Daytime running lamp</option>
+            <option value="pos">Position lamp</option>
+            <option value="stop">Stop lamp</option>
+            <option value="turn">Direction indicator</option>
+            <option value="rfog">Rear fog lamp</option>
+            <option value="rev">Reversing lamp</option>
+          </optgroup>
+        </select>
+        <p class="hint" id="funcNote"></p>
+      </section>
+
+      <section class="panel" aria-labelledby="h-data">
+        <h2 id="h-data">Data</h2>
+        <div class="ds">
+          <div class="ds-head"><span class="swatch sw-meas"></span>Measured</div>
+          <label class="file"><input id="fileMeas" type="file" accept=".ies,.IES,.ldt,.LDT,.csv,.CSV,.txt,.TXT"><span>Choose IES, LDT or CSV…</span></label>
+          <div class="ds-info" id="infoMeas">–</div>
+          <div class="row"><label class="ck"><input type="checkbox" id="mirMeas">Mirror left/right</label><label class="ck"><input type="checkbox" id="csvHMeas">CSV rows are H</label></div>
+        </div>
+        <div class="ds">
+          <div class="ds-head"><span class="swatch sw-sim"></span>Simulated</div>
+          <label class="file"><input id="fileSim" type="file" accept=".ies,.IES,.ldt,.LDT,.csv,.CSV,.txt,.TXT"><span>Choose IES, LDT or CSV…</span></label>
+          <div class="ds-info" id="infoSim">–</div>
+          <div class="row"><label class="ck"><input type="checkbox" id="mirSim">Mirror left/right</label><label class="ck"><input type="checkbox" id="csvHSim">CSV rows are H</label></div>
+        </div>
+        <div class="row" style="margin-top:12px"><button id="btnDemo" type="button">Load demo pair</button><button id="btnSwap" type="button">Swap</button></div>
+      </section>
+
+      <section class="panel" aria-labelledby="h-grid">
+        <h2 id="h-grid">Comparison window</h2>
+        <div class="grid2">
+          <label class="f">H min (°)<input id="hmin" type="number" step="0.5" value="-30"></label>
+          <label class="f">H max (°)<input id="hmax" type="number" step="0.5" value="30"></label>
+          <label class="f">V min (°)<input id="vmin" type="number" step="0.5" value="-10"></label>
+          <label class="f">V max (°)<input id="vmax" type="number" step="0.5" value="10"></label>
+        </div>
+        <label class="f" style="margin-top:8px">Grid step
+          <select id="step"><option value="0.05">0.05°</option><option value="0.1" selected>0.1°</option><option value="0.2">0.2°</option><option value="0.25">0.25°</option><option value="0.5">0.5°</option></select>
+        </label>
+      </section>
+
+      <section class="panel" aria-labelledby="h-align">
+        <h2 id="h-align">Align and scale simulation</h2>
+        <label class="f">Alignment
+          <select id="alignMode"><option value="fit" selected>Best fit (log cross-correlation)</option><option value="imax">Match hot-spot centroid</option><option value="manual">Manual offset</option><option value="none">None</option></select>
+        </label>
+        <div class="grid3" style="margin-top:8px">
+          <label class="f">ΔH (°, +R)<input id="dh" type="number" step="0.01" value="0"></label>
+          <label class="f">ΔV (°, +U)<input id="dv" type="number" step="0.01" value="0"></label>
+          <label class="f">Search ±(°)<input id="fitRange" type="number" step="0.5" min="0.5" max="5" value="2"></label>
+        </div>
+        <label class="f" style="margin-top:10px">Scaling
+          <select id="scaleMode"><option value="flux" selected>Match flux in window</option><option value="imax">Match Imax</option><option value="manual">Manual factor</option><option value="none">None (absolute)</option></select>
+        </label>
+        <label class="f" style="margin-top:8px">Factor k applied to simulation<input id="k" type="number" step="0.01" value="1"></label>
+        <p class="hint" id="alignNote"></p>
+      </section>
+
+      <section class="panel" aria-labelledby="h-cmp">
+        <h2 id="h-cmp">Evaluation</h2>
+        <div class="grid2">
+          <label class="f">Mask below (% Imax)<input id="maskPct" type="number" step="0.5" min="0" value="1"></label>
+          <label class="f">Tolerance ± (%)<input id="tolPct" type="number" step="1" min="1" value="15"></label>
+        </div>
+        <p class="hint">Cells darker than the mask are left out of statistics and the ratio map, where small absolute errors give meaningless ratios.</p>
+      </section>
+
+      <section class="panel" aria-labelledby="h-tp">
+        <h2 id="h-tp">Test points</h2>
+        <label class="f">Preset
+          <select id="tpPreset"><option value="func">Defaults for this function</option><option value="custom">Custom</option></select>
+        </label>
+        <details style="margin-top:10px">
+          <summary>Edit points (JSON)</summary>
+          <textarea id="tpJson" spellcheck="false" aria-label="Test points JSON"></textarea>
+          <div class="row" style="margin-top:6px"><button id="tpApply" type="button">Apply points</button></div>
+          <p class="hint" id="tpErr">h: + right / − left, v: + up / − down. Limits are optional: min and max in cd, or minRel and maxRel as a fraction of that dataset's Imax (for example "minRel": 0.8).</p>
+        </details>
+      </section>
+    </aside>
+
+    <main class="main">
+      <div class="kpis" id="kpis" aria-live="polite"></div>
+
+      <div>
+        <div class="tabs" role="tablist" aria-label="Views">
+          <button class="tab" role="tab" data-view="ratio" aria-selected="true">Ratio map</button>
+          <button class="tab" role="tab" data-view="iso" aria-selected="false">Isocandela</button>
+          <button class="tab" role="tab" data-view="overlay" aria-selected="false">Contour overlay</button>
+          <button class="tab" role="tab" data-view="slices" aria-selected="false">Slices</button>
+          <button class="tab" role="tab" data-view="cutoff" aria-selected="false" id="tabCut">Cut-off</button>
+        </div>
+        <div class="viewbar" id="viewbar"></div>
+      </div>
+      <div id="plots" class="plots"></div>
+      <div class="legend-note" id="plotNote"></div>
+      <div id="viewExtra"></div>
+
+      <section>
+        <div class="sec-head" style="margin-bottom:8px">
+          <h3>Test point correlation</h3>
+          <div class="row">
+            <button id="exReport" type="button" class="primary">Download report</button>
+            <button id="exPts" type="button">Points CSV</button>
+            <button id="exGrid" type="button">Ratio grid CSV</button>
+          </div>
+        </div>
+        <div class="tablewrap"><table id="tpTable"></table></div>
+      </section>
+    </main>
+  </div>
+
+  <footer>
+    <p><strong>Conventions.</strong> H is positive to the right (R), V positive upward (U), seen from behind the lamp. ΔH/ΔV is the shift applied to the simulation so it lines up with the measurement. Type A/B IES files and CSV grids are read as H-V angles directly. Type C (IES/LDT) is converted assuming the optical axis at C0/γ90 with C90 to the right; tick "Mirror left/right" if a beam comes out flipped.</p>
+    <p><strong>CSV.</strong> Matrix layout with H angles across the first row and V angles down the first column (tick "CSV rows are H" if transposed), or three columns H, V, cd. Comma, semicolon or tab separated.</p>
+    <p><strong>Ratio.</strong> Measured / simulated, on a log₂ colour scale so ×2 and ×0.5 look equally far from ×1. RMS deviation and the tolerance band are computed on unmasked cells only.</p>
+    <p><strong>Cut-off.</strong> Vertical scans in 0.05° steps on log-interpolated data. Sharpness G = log₁₀ I(β) − log₁₀ I(β+0.1°), taken at its maximum. The cut-off position β is the centre of the gradient peak (inflection of log I). Linearity is the spread of β across the scan positions. The elbow is where a straight-line fit of the rising shoulder meets the horizontal part, and the shoulder angle comes from that fit. G is only as good as the data resolution near the cut-off.</p>
+    <p>beamCorrelate · © 2026 Jalib Akther</p>
+  </footer>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.35.2/plotly.min.js"></script>
+
+<script id="core">
+/* ===== beamCorrelate core: parsing, sampling, comparison (no DOM) ===== */
+(function(){
+const DEG = Math.PI/180;
+let uid = 0;
+
+function bsearch(a, x){
+  const n = a.length; if (n < 2 || !(x >= a[0]) || !(x <= a[n-1])) return -1;
+  if (x === a[n-1]) return n-2;
+  let lo = 0, hi = n-1;
+  while (hi - lo > 1){ const m = (lo+hi) >> 1; if (a[m] <= x) lo = m; else hi = m; }
+  return lo;
+}
+function bilinear(xs, ys, Z, x, y, logInterp){
+  const i = bsearch(xs, x), j = bsearch(ys, y);
+  if (i < 0 || j < 0) return NaN;
+  const tx = (x - xs[i]) / (xs[i+1] - xs[i]), ty = (y - ys[j]) / (ys[j+1] - ys[j]);
+  const r0 = Z[j], r1 = Z[j+1];
+  const a = r0[i], b = r0[i+1], c = r1[i], d = r1[i+1];
+  if (logInterp && a > 0 && b > 0 && c > 0 && d > 0)
+    return Math.exp((Math.log(a)*(1-tx) + Math.log(b)*tx)*(1-ty) + (Math.log(c)*(1-tx) + Math.log(d)*tx)*ty);
+  return (a*(1-tx) + b*tx)*(1-ty) + (c*(1-tx) + d*tx)*ty;
+}
+function medianStep(a){
+  const d = []; for (let i = 1; i < a.length; i++) d.push(a[i] - a[i-1]);
+  d.sort((p, q) => p - q); return d.length ? d[Math.floor(d.length/2)] : NaN;
+}
+function range(a, b, step){
+  const n = Math.max(0, Math.round((b - a)/step));
+  const out = new Array(n+1);
+  for (let i = 0; i <= n; i++) out[i] = +(a + i*step).toFixed(6);
+  return out;
+}
+function sortAxis(axis){ // returns [sortedAxis, permutation]
+  const idx = axis.map((v,i)=>i).sort((p,q)=>axis[p]-axis[q]);
+  return [idx.map(i=>axis[i]), idx];
+}
+
+/* ---------- Dataset constructors ---------- */
+function makeHV(name, format, hs, vs, Z, meta){
+  // Z[vi][hi]; axes may be unsorted
+  const [hS, hP] = sortAxis(hs), [vS, vP] = sortAxis(vs);
+  const Zs = vP.map(vi => Float64Array.from(hP.map(hi => Z[vi][hi])));
+  return { id: ++uid, name, format, kind:'HV', meta: meta||{}, hs:hS, vs:vS, Z:Zs,
+    hRange:[hS[0], hS[hS.length-1]], vRange:[vS[0], vS[vS.length-1]],
+    nValues: hS.length*vS.length, vRes: medianStep(vS), hRes: medianStep(hS),
+    sample: (h,v) => bilinear(hS, vS, Zs, h, v),
+    sampleLog: (h,v) => bilinear(hS, vS, Zs, h, v, true) };
+}
+function makeC(name, format, cs, gs, Zcg, meta){
+  // cs full 0..360 ascending, gs ascending (gamma from nadir), Zcg[ci][gi]
+  const Z = gs.map((g, gi) => Float64Array.from(cs.map((c, ci) => Zcg[ci][gi])));
+  const mk = logInterp => (h, v) => {
+    const cv = Math.cos(v*DEG);
+    const x = cv*Math.cos(h*DEG), y = cv*Math.sin(h*DEG), z = Math.sin(v*DEG);
+    const g = Math.acos(Math.max(-1, Math.min(1, -z)))/DEG;
+    let c = Math.atan2(y, x)/DEG; if (c < 0) c += 360;
+    return bilinear(cs, gs, Z, c, g, logInterp);
+  };
+  return { id: ++uid, name, format, kind:'C', meta: meta||{}, cs, gs, Z,
+    hRange:[-180, 180], vRange:[gs[0]-90, gs[gs.length-1]-90],
+    nValues: cs.length*gs.length, vRes: medianStep(gs), hRes: medianStep(cs),
+    sample: mk(false), sampleLog: mk(true) };
+}
+
+/* Expand C-plane symmetry to a full 0..360 table. stored ascending; rows[k] = array over gamma */
+function expandC(stored, rows, mode){
+  const norm = c => ((c % 360) + 360) % 360;
+  const mapTo = {
+    full: c => norm(c),
+    rot: () => stored[0],
+    quad: c => { c = norm(c); if (c > 180) c = 360 - c; if (c > 90) c = 180 - c; return c; },
+    bilat: c => { c = norm(c); if (c > 180) c = 360 - c; return c; },
+    bilat90: c => { c = norm(c); if (c < 90) c = 180 - c; else if (c > 270) c = 540 - c; return c; },
+    ldt3: c => { c = norm(c); if (c > 180) c -= 360; if (c > 90) c = 180 - c; else if (c < -90) c = -180 - c; return c; }
+  }[mode];
+  const t = new Set([0, 360]);
+  if (mode === 'full') stored.forEach(s => t.add(+norm(s).toFixed(6)));
+  else if (mode !== 'rot') stored.forEach(s => [s, -s, 180-s, 180+s, 360-s].forEach(m => t.add(+norm(m).toFixed(6))));
+  const targets = [...t].sort((a,b)=>a-b);
+  const interpRow = a => {
+    if (stored.length === 1) return rows[0];
+    if (a <= stored[0]) return rows[0];
+    if (a >= stored[stored.length-1]){
+      // full tables that stop short of 360 wrap back to C0
+      if (mode === 'full' && stored[stored.length-1] < 360 && norm(stored[0]) === 0){
+        const s0 = stored[stored.length-1], f = (a - s0)/(360 - s0);
+        return rows[rows.length-1].map((v,i)=> v*(1-f) + rows[0][i]*f);
+      }
+      return rows[rows.length-1];
+    }
+    const i = bsearch(stored, a), f = (a - stored[i])/(stored[i+1]-stored[i]);
+    return rows[i].map((v,k)=> v*(1-f) + rows[i+1][k]*f);
+  };
+  return { cs: targets, rows: targets.map(c => interpRow(mapTo(c))) };
+}
+
+/* ---------- IES LM-63 ---------- */
+function parseIES(text, name){
+  const lines = text.split(/\r?\n/); const meta = {};
+  let i = 0;
+  for (; i < lines.length; i++){
+    const L = lines[i].trim();
+    const m = L.match(/^\[(\w+)\]\s*(.*)$/); if (m) meta[m[1]] = m[2];
+    if (/^TILT\s*=/i.test(L)) break;
+  }
+  if (i >= lines.length) throw new Error('No TILT= line found, so this does not look like an IES LM-63 file.');
+  const tilt = lines[i].split('=')[1].trim().toUpperCase();
+  const toks = lines.slice(i+1).join(' ').split(/[\s,]+/).filter(Boolean).map(Number);
+  let p = 0;
+  if (tilt === 'INCLUDE'){ p++; const n = toks[p++]; p += 2*n; }
+  const nLamps = toks[p++], lmPerLamp = toks[p++], mult = toks[p++];
+  const nV = toks[p++], nH = toks[p++], ptype = toks[p++]; p++; p += 3;
+  const ballast = toks[p++]; p++; p++;
+  if (!(nV > 0 && nH > 0)) throw new Error('IES header could not be read (angle counts missing).');
+  const vs = toks.slice(p, p+nV); p += nV;
+  const hs = toks.slice(p, p+nH); p += nH;
+  const vals = toks.slice(p, p + nV*nH);
+  if (vals.length < nV*nH || vals.some(Number.isNaN)) throw new Error(`IES candela block is short: expected ${nV*nH} values, found ${vals.length}.`);
+  const f = (mult || 1) * (ballast || 1);
+  const rows = []; for (let k = 0; k < nH; k++) rows.push(vals.slice(k*nV, (k+1)*nV).map(x => x*f));
+  meta.lamps = nLamps; meta.lmPerLamp = lmPerLamp;
+  if (ptype === 1){
+    const first = hs[0], last = hs[nH-1];
+    const mode = nH === 1 ? 'rot' : (first === 0 && last === 90) ? 'quad' : (first === 0 && last === 180) ? 'bilat' : (first === 90 && last === 270) ? 'bilat90' : 'full';
+    const ex = expandC(hs, rows, mode);
+    const ds = makeC(name, 'IES', ex.cs, vs, ex.rows, meta);
+    ds.typeLabel = 'Type C' + (mode !== 'full' ? ` (${mode === 'rot' ? 'rotational' : mode === 'quad' ? 'quadrant' : 'bilateral'} symmetry)` : '');
+    return ds;
+  }
+  // Type A (3) / Type B (2): read as H-V grid, rows are per horizontal angle
+  let H = hs.slice(), R = rows.map(r => r.slice());
+  if (H[0] === 0 && H[H.length-1] > 0){ // one-sided: mirror to the left
+    const negH = [], negR = [];
+    for (let k = H.length-1; k >= 1; k--){ negH.push(-H[k]); negR.push(R[k]); }
+    H = negH.concat(H); R = negR.concat(R);
+  }
+  const Z = vs.map((v, vi) => H.map((h, hi) => R[hi][vi]));
+  const ds = makeHV(name, 'IES', H, vs, Z, meta);
+  ds.typeLabel = ptype === 3 ? 'Type A' : 'Type B';
+  return ds;
+}
+
+/* ---------- EULUMDAT (LDT) ---------- */
+function parseLDT(text, name){
+  const L = text.split(/\r?\n/).map(s => s.trim());
+  const num = k => parseFloat((L[k]||'').replace(',', '.'));
+  const isym = Math.round(num(2)), Mc = Math.round(num(3)), Ng = Math.round(num(5));
+  if (!(Mc > 0 && Ng > 0)) throw new Error('LDT header could not be read (Mc/Ng missing).');
+  const cfli = num(23) || 1, nSets = Math.round(num(25));
+  let flux = 0;
+  for (let s = 0; s < nSets; s++){ const v = num(26 + s*6 + 2); if (!isNaN(v)) flux += Math.abs(v); }
+  const start = 26 + 6*nSets + 10;
+  const toks = L.slice(start).join(' ').split(/[\s]+/).filter(Boolean).map(s => parseFloat(s.replace(',', '.')));
+  const Call = toks.slice(0, Mc), G = toks.slice(Mc, Mc+Ng);
+  let mc1 = 1, mc2 = Mc;
+  if (isym === 1){ mc1 = 1; mc2 = 1; } else if (isym === 2){ mc2 = Mc/2 + 1; } else if (isym === 3){ mc1 = 3*Mc/4 + 1; mc2 = mc1 + Mc/2; } else if (isym === 4){ mc2 = Mc/4 + 1; }
+  const nPlanes = mc2 - mc1 + 1;
+  const vals = toks.slice(Mc+Ng, Mc+Ng + nPlanes*Ng);
+  if (vals.length < nPlanes*Ng || vals.some(Number.isNaN)) throw new Error(`LDT intensity block is short: expected ${nPlanes*Ng} values, found ${vals.length}.`);
+  const f = (flux > 0 ? flux/1000 : 1) * cfli;
+  let stored = [], rows = [];
+  for (let k = 0; k < nPlanes; k++){
+    let c = Call[(mc1 - 1 + k) % Mc];
+    if (isym === 3 && c > 180) c -= 360;
+    if (isym === 3 && k === nPlanes - 1 && c === 0) c = 90; // guard for odd files
+    stored.push(c); rows.push(vals.slice(k*Ng, (k+1)*Ng).map(x => x*f));
+  }
+  const order = stored.map((c,i)=>i).sort((a,b)=>stored[a]-stored[b]);
+  stored = order.map(i => stored[i]); rows = order.map(i => rows[i]);
+  const mode = {0:'full',1:'rot',2:'bilat',3:'ldt3',4:'quad'}[isym] || 'full';
+  const ex = expandC(stored, rows, mode);
+  const ds = makeC(name, 'LDT', ex.cs, G, ex.rows, { luminaire: L[8], flux });
+  ds.typeLabel = 'C-γ' + (flux > 0 ? `, ${Math.round(flux)} lm lamps` : ', relative');
+  return ds;
+}
+
+/* ---------- CSV ---------- */
+function parseCSV(text, name, rowsAreH){
+  const raw = text.split(/\r?\n/).filter(l => l.trim() !== '' && !/^\s*#/.test(l));
+  const sample = raw.slice(0, 20).join('\n');
+  const cnt = ch => (sample.match(new RegExp(ch === '\t' ? '\\t' : '\\' + ch, 'g')) || []).length;
+  const delim = cnt('\t') > 0 ? '\t' : cnt(';') > 0 ? ';' : ',';
+  const decComma = delim !== ',';
+  const toNum = s => { s = s.trim().replace(/^"|"$/g, ''); if (decComma) s = s.replace(',', '.'); return s === '' ? NaN : Number(s); };
+  const rows = raw.map(l => l.split(delim).map(toNum));
+  const numericRows = rows.filter(r => r.filter(x => !Number.isNaN(x)).length >= 3);
+  if (numericRows.length < 3) throw new Error('CSV has too few numeric rows.');
+  const threeCol = numericRows.filter(r => r.length === 3 && r.every(x => !Number.isNaN(x))).length;
+  if (threeCol >= 0.9*numericRows.length && numericRows.length > 9){
+    const hset = new Set(), vset = new Set();
+    numericRows.forEach(r => { hset.add(r[0]); vset.add(r[1]); });
+    const hs = [...hset].sort((a,b)=>a-b), vs = [...vset].sort((a,b)=>a-b);
+    const hi = new Map(hs.map((h,i)=>[h,i])), vi = new Map(vs.map((v,i)=>[v,i]));
+    const Z = vs.map(() => new Array(hs.length).fill(NaN));
+    numericRows.forEach(r => { Z[vi.get(r[1])][hi.get(r[0])] = r[2]; });
+    const ds = makeHV(name, 'CSV', hs, vs, Z, {});
+    ds.typeLabel = 'H, V, cd columns';
+    return ds;
+  }
+  // matrix: first row with >=3 numeric cells after the first is the column-angle row
+  const hi = rows.findIndex(r => r.slice(1).filter(x => !Number.isNaN(x)).length >= 3);
+  const header = rows[hi];
+  const colIdx = []; const colAng = [];
+  header.forEach((x, k) => { if (k > 0 && !Number.isNaN(x)) { colIdx.push(k); colAng.push(x); } });
+  const rowAng = [], Z = [];
+  for (let r = hi+1; r < rows.length; r++){
+    const row = rows[r]; if (Number.isNaN(row[0])) continue;
+    const vals = colIdx.map(k => row[k]); if (vals.filter(x => !Number.isNaN(x)).length < colIdx.length*0.5) continue;
+    rowAng.push(row[0]); Z.push(vals.map(x => Number.isNaN(x) ? NaN : x));
+  }
+  if (rowAng.length < 2) throw new Error('CSV matrix needs at least two data rows.');
+  let ds;
+  if (rowsAreH){
+    const Zt = colAng.map((v, ci) => rowAng.map((h, ri) => Z[ri][ci]));
+    ds = makeHV(name, 'CSV', rowAng, colAng, Zt, {});
+  } else ds = makeHV(name, 'CSV', colAng, rowAng, Z, {});
+  ds.typeLabel = 'matrix';
+  return ds;
+}
+
+function parseFile(text, name, opts){
+  const ext = (name.split('.').pop() || '').toLowerCase();
+  if (ext === 'ies' || /^\s*(IESNA|\[|TILT)/m.test(text.slice(0, 2000)) && /TILT\s*=/i.test(text)) return parseIES(text, name);
+  if (ext === 'ldt') return parseLDT(text, name);
+  return parseCSV(text, name, opts && opts.rowsAreH);
+}
+
+/* ---------- Demo data ---------- */
+function mulberry32(a){ return function(){ a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const DEMO_LABEL = { low:'low beam', lowLHT:'low beam LHT', fog:'front fog', high:'high beam', signal:'signal lamp', corner:'cornering lamp' };
+function demoBeam(o){
+  const { kind='low', shiftH=0, shiftV=0, eff=1, edge=0.06, hotW=1, noise=0, seed=1, step=0.2, stray=0, amp=250, name } = o;
+  const rnd = mulberry32(seed);
+  const hs = range(-60, 60, step), vs = range(-20, 20, step);
+  const t15 = Math.tan(15*DEG);
+  const g2 = (a, b) => Math.exp(-(a*a + b*b));
+  const Z = vs.map(v => hs.map(h => {
+    let x = h - shiftH; const y = v - shiftV; let I;
+    if (kind === 'low' || kind === 'lowLHT' || kind === 'fog'){
+      if (kind === 'lowLHT') x = -x;
+      const c0 = kind === 'fog' ? -1.0 : -0.57;
+      const vc = (kind === 'fog' || x < 0) ? c0 : Math.min(c0 + x*t15, 1.2);
+      const T = 1/(1 + Math.exp((y - vc)/edge));
+      const lit = kind === 'fog'
+        ? 9000*g2(x/(12*hotW), (y+2.2)/(1.2*hotW)) + 2000*g2(x/30, (y+4)/4)
+        : 24000*g2((x-1.6)/(3.2*hotW), (y+1.4)/(1.1*hotW)) + 9000*g2(x/9, (y+2.2)/2.2) + 2600*g2(x/24, (y+3.5)/4.5);
+      const glare = ((kind === 'fog' ? 60 : 180) + stray)*Math.exp(-Math.abs(x)/25)*Math.exp(-Math.max(0, y)/6);
+      I = T*lit + (1-T)*glare;
+    } else if (kind === 'high'){
+      I = 80000*g2(x/(3*hotW), (y-0.1)/(1.6*hotW)) + 18000*g2(x/12, y/4.5) + 800*g2(x/35, y/9);
+    } else if (kind === 'corner'){
+      I = amp*(g2((x-30)/(12*hotW), (y+2)/(4*hotW)) + 0.1*g2((x-25)/30, y/10));
+    } else {
+      I = amp*(g2(x/(13*hotW), y/(6.5*hotW)) + 0.15*g2(x/30, y/14));
+    }
+    I *= eff;
+    if (noise) I *= 1 + noise*(rnd()*2 - 1);
+    return I;
+  }));
+  const ds = makeHV(name, 'demo', hs, vs, Z, {});
+  ds.typeLabel = 'synthetic ' + (DEMO_LABEL[kind] || kind);
+  return ds;
+}
+function demoPair(kind, amp){
+  kind = kind || 'low';
+  const tag = kind.toUpperCase();
+  return {
+    meas: demoBeam({ kind, amp, name:`demo_measured_${tag}.csv`, shiftH:0.15, shiftV:-0.08, eff:0.88, edge:0.085, hotW:1.08, noise:0.015, seed:7, step:0.1, stray:60 }),
+    sim: demoBeam({ kind, amp, name:`demo_simulated_${tag}.ies`, step:0.1 })
+  };
+}
+
+/* ---------- Comparison ---------- */
+function effRange(r, mir){ return mir ? [-r[1], -r[0]] : r; }
+
+function bestFit(mS, sS, win, thr, span){
+  const cs = 0.25, H = [], V = [], LM = [];
+  for (let v = win.vmin; v <= win.vmax + 1e-9; v += cs)
+    for (let h = win.hmin; h <= win.hmax + 1e-9; h += cs){
+      const m = mS(h, v); if (m > thr){ H.push(h); V.push(v); LM.push(Math.log10(m)); }
+    }
+  let n = H.length; if (n < 20) return { dh:0, dv:0, ok:false };
+  const stride = Math.max(1, Math.ceil(n/2500));
+  const idx = []; for (let i = 0; i < n; i += stride) idx.push(i);
+  const cost = (dh, dv) => {
+    let s = 0, s2 = 0, c = 0;
+    for (const i of idx){
+      const sv = sS(H[i] - dh, V[i] - dv);
+      if (sv > 0){ const d = LM[i] - Math.log10(sv); s += d; s2 += d*d; c++; }
+    }
+    if (c < idx.length*0.6) return Infinity;
+    const mu = s/c; return s2/c - mu*mu;
+  };
+  const search = (ch, cv, half, st) => {
+    let best = { dh:ch, dv:cv, c:Infinity };
+    for (let a = -half; a <= half + 1e-9; a += st) for (let b = -half; b <= half + 1e-9; b += st){
+      const dh = +(ch + a).toFixed(4), dv = +(cv + b).toFixed(4), c = cost(dh, dv);
+      if (c < best.c) best = { dh, dv, c };
+    }
+    return best;
+  };
+  const c1 = search(0, 0, span, Math.max(0.1, span/8));
+  const c2 = search(c1.dh, c1.dv, Math.max(0.1, span/8), 0.025);
+  return { dh: c2.dh, dv: c2.dv, ok: isFinite(c2.c) };
+}
+
+function centroid(f, hs, vs){
+  let mx = 0;
+  for (const v of vs) for (const h of hs){ const x = f(h, v); if (x > mx) mx = x; }
+  let sw = 0, sh = 0, sv = 0;
+  for (const v of vs) for (const h of hs){ const x = f(h, v); if (x >= 0.9*mx){ sw += x; sh += x*h; sv += x*v; } }
+  return sw > 0 ? { h: sh/sw, v: sv/sw } : { h:0, v:0 };
+}
+
+function compute(meas, sim, o, points, fitCache){
+  const mS = (h, v) => meas.sample(o.mirM ? -h : h, v);
+  const sS0 = (h, v) => sim.sample(o.mirS ? -h : h, v);
+  const rM = effRange(meas.hRange, o.mirM), rS = effRange(sim.hRange, o.mirS);
+  const win = {
+    hmin: Math.max(o.hmin, rM[0], rS[0]), hmax: Math.min(o.hmax, rM[1], rS[1]),
+    vmin: Math.max(o.vmin, meas.vRange[0], sim.vRange[0]), vmax: Math.min(o.vmax, meas.vRange[1], sim.vRange[1])
+  };
+  if (!(win.hmax > win.hmin && win.vmax > win.vmin)) throw new Error('The two datasets do not overlap inside the comparison window.');
+  const step = o.step;
+  const hs = range(win.hmin, win.hmax, step).filter(h => h <= win.hmax + 1e-9);
+  const vs = range(win.vmin, win.vmax, step).filter(v => v <= win.vmax + 1e-9);
+  const nx = hs.length, ny = vs.length;
+  const M = vs.map(v => Float64Array.from(hs, h => mS(h, v)));
+  let Mmax = 0, MmaxAt = [0,0];
+  M.forEach((r, j) => r.forEach((x, i) => { if (x > Mmax){ Mmax = x; MmaxAt = [hs[i], vs[j]]; } }));
+  const thr = (o.maskPct/100)*Mmax;
+
+  // alignment
+  let dh = 0, dv = 0, fit = null, fitKey = null;
+  if (o.alignMode === 'manual'){ dh = o.dh; dv = o.dv; }
+  else if (o.alignMode === 'imax'){
+    const cs = range(win.hmin, win.hmax, Math.max(step, 0.1)), cv = range(win.vmin, win.vmax, Math.max(step, 0.1));
+    const a = centroid(mS, cs, cv), b = centroid(sS0, cs, cv);
+    dh = +(a.h - b.h).toFixed(3); dv = +(a.v - b.v).toFixed(3);
+  } else if (o.alignMode === 'fit'){
+    fitKey = [meas.id, sim.id, o.mirM, o.mirS, win.hmin, win.hmax, win.vmin, win.vmax, Math.max(o.maskPct, 2), o.fitRange].join('|');
+    fit = (fitCache && fitCache.key === fitKey) ? fitCache.fit : bestFit(mS, sS0, win, Math.max(o.maskPct, 2)/100*Mmax, o.fitRange);
+    dh = fit.dh; dv = fit.dv;
+  }
+  const sS = (h, v) => sS0(h - dh, v - dv);
+  const S0 = vs.map(v => Float64Array.from(hs, h => sS(h, v)));
+
+  // scaling (flux = sum I cos(v) dH dV in rad^2 over cells valid in both)
+  const dA = (step*DEG)**2;
+  let phiM = 0, phiS = 0, S0max = 0;
+  for (let j = 0; j < ny; j++){ const w = Math.cos(vs[j]*DEG)*dA;
+    for (let i = 0; i < nx; i++){ const m = M[j][i], s = S0[j][i];
+      if (s > S0max) S0max = s;
+      if (Number.isFinite(m) && Number.isFinite(s)){ phiM += m*w; phiS += s*w; } } }
+  let k = 1;
+  if (o.scaleMode === 'imax') k = S0max > 0 ? Mmax/S0max : 1;
+  else if (o.scaleMode === 'flux') k = phiS > 0 ? phiM/phiS : 1;
+  else if (o.scaleMode === 'manual') k = o.k > 0 ? o.k : 1;
+  const S = S0.map(r => r.map(x => x*k));
+  let Smax = 0, SmaxAt = [0,0];
+  S.forEach((r, j) => r.forEach((x, i) => { if (x > Smax){ Smax = x; SmaxAt = [hs[i], vs[j]]; } }));
+
+  // ratio map + statistics
+  const tol = o.tolPct/100;
+  const R = vs.map(() => new Float64Array(nx).fill(NaN));
+  let n = 0, sum = 0, sum2 = 0, inTol = 0, sx = 0, sy = 0, sxx = 0, syy = 0, sxy = 0;
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++){
+    const m = M[j][i], s = S[j][i];
+    if (!(m > 0 && s > 0) || Math.max(m, s) < thr) continue;
+    const l = Math.log2(m/s); R[j][i] = l;
+    n++; sum += l; sum2 += l*l; if (Math.abs(m/s - 1) <= tol) inTol++;
+    const a = Math.log10(m), b = Math.log10(s); sx += a; sy += b; sxx += a*a; syy += b*b; sxy += a*b;
+  }
+  const mean = n ? sum/n : NaN, rms = n ? Math.sqrt(sum2/n) : NaN;
+  const r = n > 2 ? (n*sxy - sx*sy)/Math.sqrt((n*sxx - sx*sx)*(n*syy - sy*sy)) : NaN;
+
+  // test points
+  const pts = (points || []).map(p => {
+    const m = mS(p.h, p.v), s = k*sS(p.h, p.v);
+    const judge = (x, imax) => {
+      const mn = p.min != null ? p.min : p.minRel != null ? p.minRel*imax : null;
+      const mx = p.max != null ? p.max : p.maxRel != null ? p.maxRel*imax : null;
+      if (mn == null && mx == null) return { st:'na', margin:NaN };
+      if (!Number.isFinite(x)) return { st:'na', margin:NaN };
+      let ok = true, margin = Infinity;
+      if (mn != null){ ok = ok && x >= mn; margin = Math.min(margin, x/mn - 1); }
+      if (mx != null){ ok = ok && x <= mx; margin = Math.min(margin, 1 - x/mx); }
+      return { st: ok ? 'pass' : 'fail', margin };
+    };
+    return { ...p, m, s, delta: (m > 0 && s > 0) ? (m/s - 1) : NaN, jm: judge(m, Mmax), js: judge(s, Smax) };
+  });
+
+  return { hs, vs, M, S, R, win, step, Mmax, MmaxAt, Smax, SmaxAt, S0max, dh, dv, k, fit, fitKey,
+    phiM, phiS: phiS*k, phiS0: phiS, n, mean, rms, inTol: n ? inTol/n : NaN, r, thr, pts,
+    mS, sS: (h, v) => k*sS(h, v), sRaw: (h, v) => k*sS0(h, v),
+    mSL: (h, v) => meas.sampleLog(o.mirM ? -h : h, v),
+    sSL: (h, v) => k*sim.sampleLog(o.mirS ? -(h - dh) : h - dh, v - dv),
+    sRawL: (h, v) => k*sim.sampleLog(o.mirS ? -h : h, v),
+    vRes: { m: meas.vRes, s: sim.vRes } };
+}
+
+/* ---------- Cut-off analysis ----------
+   Vertical scans in 0.05° steps on log-interpolated data. G(β) = log10 I(β) − log10 I(β+0.1°).
+   G is the maximum; the cut-off position β is the G-weighted centre of the contiguous region
+   within 85% of that maximum (the inflection of log I), which keeps β stable on noisy scans. */
+function cutoffScan(f, h, vlo, vhi, thr){
+  const fine = 0.05, kk = 2;
+  const vv = range(vlo, vhi, fine), I = vv.map(v => f(h, v));
+  const pv = [], pg = []; let bi = -1, bg = -Infinity;
+  for (let i = 0; i + kk < vv.length; i++){
+    const a = I[i], b = I[i+kk]; pv.push(+(vv[i] + 0.05).toFixed(4));
+    if (a > thr && b > 0){ const g = Math.log10(a) - Math.log10(b); pg.push(g); if (g > bg){ bg = g; bi = pg.length - 1; } }
+    else pg.push(null);
+  }
+  let beta = NaN;
+  if (bi >= 0){
+    let lo = bi, hi = bi;
+    while (lo > 0 && pg[lo-1] != null && pg[lo-1] >= 0.85*bg) lo--;
+    while (hi < pg.length - 1 && pg[hi+1] != null && pg[hi+1] >= 0.85*bg) hi++;
+    let sw = 0, sv = 0; for (let i = lo; i <= hi; i++){ sw += pg[i]; sv += pg[i]*pv[i]; }
+    beta = sv/sw;
+  }
+  return { beta, g: bi >= 0 ? bg : NaN, prof: { v: pv, g: pg } };
+}
+function cutoffAnalysis(res, cfg){
+  const mF = res.mSL, sF = cfg.simAligned ? res.sSL : res.sRawL;
+  const thrM = (cfg.thrPct/100)*res.Mmax, thrS = (cfg.thrPct/100)*res.Smax;
+  const vlo = Math.max(res.win.vmin, -4), vhi = Math.min(res.win.vmax, 4);
+  const scanAt = h => ({ h, m: cutoffScan(mF, h, vlo, vhi, thrM), s: cutoffScan(sF, h, vlo, vhi, thrS) });
+  const scans = cfg.scans.map(scanAt);
+  const gScan = scanAt(cfg.gAt);
+  const spread = key => { const b = scans.map(x => x[key].beta).filter(Number.isFinite); return b.length >= 2 ? Math.max(...b) - Math.min(...b) : NaN; };
+  const tH = range(Math.max(res.win.hmin, -12), Math.min(res.win.hmax, 12), 0.25);
+  const trM = tH.map(h => cutoffScan(mF, h, vlo, vhi, thrM).beta), trS = tH.map(h => cutoffScan(sF, h, vlo, vhi, thrS).beta);
+  // elbow: intersect the rising shoulder (least squares) with the mean horizontal-part level
+  const elbow = (tr, key) => {
+    if (cfg.side === 'both') return null;
+    const sgn = cfg.side === 'L' ? 1 : -1;
+    const lv = scans.map(x => x[key].beta).filter(Number.isFinite); if (!lv.length) return null;
+    const base = lv.reduce((a, b) => a + b, 0)/lv.length;
+    let n = 0, sx = 0, sy = 0, sxx = 0, sxy = 0;
+    tH.forEach((h, i) => { const x = sgn*h, y = tr[i];
+      if (x > -1 && x < 8 && Number.isFinite(y) && y > base + 0.15 && y < base + 0.9){ n++; sx += x; sy += y; sxx += x*x; sxy += x*y; } });
+    if (n < 3) return null;
+    const b = (n*sxy - sx*sy)/(n*sxx - sx*sx), a = (sy - b*sx)/n;
+    if (!(b > 0.02)) return null;
+    return { h: sgn*(base - a)/b, v: base, slope: Math.atan(b)/DEG };
+  };
+  return { scans, gScan, linM: spread('m'), linS: spread('s'), tH, trM, trS, elbowM: elbow(trM, 'm'), elbowS: elbow(trS, 's'), cfg };
+}
+
+function slices(res, hAt, vAt){
+  const fine = 0.05;
+  const hh = range(res.win.hmin, res.win.hmax, Math.min(res.step, 0.1));
+  const vv = range(res.win.vmin, res.win.vmax, fine);
+  const hM = hh.map(h => res.mS(h, vAt)), hS = hh.map(h => res.sS(h, vAt));
+  const vM = vv.map(v => res.mS(hAt, v)), vS = vv.map(v => res.sS(hAt, v));
+  // cutoff sharpness: G(v) = log10 I(v) - log10 I(v+0.1), largest value along the vertical scan
+  const grad = (arr) => {
+    let best = { g:-Infinity, v:NaN }; const k = Math.round(0.1/fine);
+    for (let i = 0; i + k < vv.length; i++){
+      const a = arr[i], b = arr[i+k];
+      if (a > res.thr && b > 0){ const g = Math.log10(a) - Math.log10(b); if (g > best.g) best = { g, v: vv[i] + 0.05 }; }
+    }
+    return best;
+  };
+  return { hh, vv, hM, hS, vM, vS, gM: grad(vM), gS: grad(vS) };
+}
+
+function contourSegs(xs, ys, Z, L){
+  const X = [], Y = [];
+  for (let j = 0; j < ys.length-1; j++){
+    const r0 = Z[j], r1 = Z[j+1], y0 = ys[j], y1 = ys[j+1];
+    for (let i = 0; i < xs.length-1; i++){
+      const a = r0[i], b = r0[i+1], c = r1[i+1], d = r1[i];
+      if (!(Number.isFinite(a) && Number.isFinite(b) && Number.isFinite(c) && Number.isFinite(d))) continue;
+      const idx = (a >= L ? 1 : 0) | (b >= L ? 2 : 0) | (c >= L ? 4 : 0) | (d >= L ? 8 : 0);
+      if (idx === 0 || idx === 15) continue;
+      const x0 = xs[i], x1 = xs[i+1];
+      const B = () => [x0 + (L-a)/(b-a)*(x1-x0), y0];
+      const Rr = () => [x1, y0 + (L-b)/(c-b)*(y1-y0)];
+      const T = () => [x0 + (L-d)/(c-d)*(x1-x0), y1];
+      const Lf = () => [x0, y0 + (L-a)/(d-a)*(y1-y0)];
+      const seg = (p, q) => { X.push(p[0], q[0], null); Y.push(p[1], q[1], null); };
+      switch (idx){
+        case 1: case 14: seg(Lf(), B()); break;
+        case 2: case 13: seg(B(), Rr()); break;
+        case 3: case 12: seg(Lf(), Rr()); break;
+        case 4: case 11: seg(Rr(), T()); break;
+        case 6: case 9: seg(B(), T()); break;
+        case 7: case 8: seg(Lf(), T()); break;
+        case 5: seg(Lf(), B()); seg(Rr(), T()); break;
+        case 10: seg(B(), Rr()); seg(T(), Lf()); break;
+      }
+    }
+  }
+  return { x: X, y: Y };
+}
+
+const ptName = (h, v) => {
+  const hp = h === 0 ? '' : Math.abs(h) + (h > 0 ? 'R' : 'L'), vp = v === 0 ? '' : Math.abs(v) + (v > 0 ? 'U' : 'D');
+  return !hp && !vp ? 'HV' : !vp ? hp : !hp ? vp : vp + '-' + hp;
+};
+const gridPts = rows => rows.flatMap(([v, hs]) => hs.map(h => ({ name: ptName(h, v), h, v })));
+const R112B = [
+  { name:'B50L', h:-3.43, v: 0.57, max:350 },
+  { name:'75R',  h: 1.15, v:-0.57, min:10100 },
+  { name:'75L',  h:-3.43, v:-0.57, max:10600 },
+  { name:'50L',  h:-3.43, v:-0.86, max:13200 },
+  { name:'50R',  h: 1.72, v:-0.86, min:10100 },
+  { name:'50V',  h: 0,    v:-0.86, min:5100 },
+  { name:'25L',  h:-9,    v:-1.72, min:1700 },
+  { name:'25R',  h: 9,    v:-1.72, min:1700 }
+];
+const swapLR = s => s.replace(/(\d)L\b/g, '$1#').replace(/(\d)R\b/g, '$1L').replace(/(\d)#/g, '$1R');
+const PRESETS = {
+  lb_rht: R112B,
+  lb_lht: R112B.map(p => ({ ...p, name: swapLR(p.name), h: p.h === 0 ? 0 : -p.h })),
+  hb: [
+    { name:'HV', h:0, v:0, minRel:0.8 },
+    { name:'2.25L', h:-2.25, v:0, min:20250 }, { name:'2.25R', h:2.25, v:0, min:20250 },
+    { name:'9L', h:-9, v:0, min:5100 }, { name:'9R', h:9, v:0, min:5100 }
+  ],
+  fog: gridPts([[1, [-10, 0, 10]], [-3, [-26, -10, 0, 10, 26]]]),
+  sig20: gridPts([[10, [-10, -5, 0, 5, 10]], [5, [-20, -10, 0, 10, 20]], [0, [-20, -10, -5, 0, 5, 10, 20]], [-5, [-20, -10, 0, 10, 20]], [-10, [-10, -5, 0, 5, 10]]]),
+  rfog: gridPts([[5, [-10, 0, 10]], [0, [-10, 0, 10]], [-5, [-10, 0, 10]]]),
+  rev: gridPts([[10, [0]], [5, [-30, -20, -10, 0, 10, 20, 30]], [0, [-45, -30, -20, -10, 0, 10, 20, 30, 45]], [-5, [-45, -20, 0, 20, 45]]]),
+  corner: gridPts([[0, [10, 20, 30, 45]], [-2.5, [10, 20, 30, 45]]]),
+  custom: [ { name:'HV', h:0, v:0 } ]
+};
+
+const BC = { DEG, range, bilinear, makeHV, makeC, expandC, parseIES, parseLDT, parseCSV, parseFile, demoPair, demoBeam, compute, slices, contourSegs, cutoffScan, cutoffAnalysis, PRESETS };
+if (typeof window !== 'undefined') window.BC = BC;
+if (typeof module !== 'undefined') module.exports = BC;
+})();
+</script>
+
+<script>
+/* ===== beamCorrelate UI ===== */
+(function(){
+const BC = window.BC;
+const $ = id => document.getElementById(id);
+const W30 = [-30, 30, -10, 10], W20 = [-20, 20, -10, 10];
+const SIG_NOTE = 'Standard 10°/20° grid positions only. Add your limits in the test-point editor.';
+const FUNCS = {
+  lb_rht: { label:'Low beam (RHT)', win:W30, step:0.1, pts:'lb_rht', demo:['low'], slice:[2.5, -0.86],
+    cut:{ side:'L', scans:[-1.5, -2.5, -3.5], gAt:-2.5, gMin:0.13, linTol:0.2 },
+    note:'ECE R112 class B points. Cut-off scans at 1.5L, 2.5L and 3.5L.' },
+  lb_lht: { label:'Low beam (LHT)', win:W30, step:0.1, pts:'lb_lht', demo:['lowLHT'], slice:[-2.5, -0.86],
+    cut:{ side:'R', scans:[1.5, 2.5, 3.5], gAt:2.5, gMin:0.13, linTol:0.2 },
+    note:'R112 class B points mirrored for left-hand traffic. Cut-off scans at 1.5R, 2.5R and 3.5R.' },
+  hb: { label:'High beam', win:W30, step:0.1, pts:'hb', demo:['high'], slice:[0, 0],
+    note:'Points: HV ≥ 80% of Imax, 20 250 cd to 2.25° and 5 100 cd to 9° either side.' },
+  fog: { label:'Front fog lamp', win:W30, step:0.1, pts:'fog', demo:['fog'], slice:[0, -3],
+    cut:{ side:'both', scans:[-3.5, -2.5, -1.5, 1.5, 2.5, 3.5], gAt:-2.5, gMin:null, linTol:null },
+    note:'Grid positions only. Flat cut-off scanned on both sides of V-V; set a minimum G if your requirement has one.' },
+  corner: { label:'Cornering lamp', win:[-50, 50, -10, 10], step:0.25, pts:'corner', demo:['corner', 1500], slice:[30, -2.5], note:'Positions 10° to 45° outboard (right-side lamp; tick Mirror for a left lamp). Add your limits.' },
+  drl: { label:'Daytime running lamp', win:W20, step:0.2, pts:'sig20', demo:['signal', 600], slice:[0, 0], note:SIG_NOTE },
+  pos: { label:'Position lamp', win:W20, step:0.2, pts:'sig20', demo:['signal', 40], slice:[0, 0], note:SIG_NOTE },
+  stop: { label:'Stop lamp', win:W20, step:0.2, pts:'sig20', demo:['signal', 120], slice:[0, 0], note:SIG_NOTE },
+  turn: { label:'Direction indicator', win:W20, step:0.2, pts:'sig20', demo:['signal', 300], slice:[0, 0], note:SIG_NOTE },
+  rfog: { label:'Rear fog lamp', win:[-10, 10, -5, 5], step:0.1, pts:'rfog', demo:['signal', 300], slice:[0, 0], note:'Grid ±10° H, ±5° V, positions only. Add your limits.' },
+  rev: { label:'Reversing lamp', win:[-45, 45, -5, 15], step:0.25, pts:'rev', demo:['signal', 250], slice:[0, 0], note:'Grid to ±45° H, positions only. Add your limits.' }
+};
+const st = { func:'lb_rht', meas:null, sim:null, raw:{ meas:null, sim:null }, isDemo:false, view:'ratio', fitCache:null, res:null, cutRes:null, cut:null,
+  points: BC.PRESETS.lb_rht.slice(), ratioSpan:1, sliceH:2.5, sliceV:-0.86, logY:true, isoLevels:'' };
+const hasPlotly = typeof window.Plotly !== 'undefined';
+let dlCap = null;
+try { if (window.claude && window.claude.use) dlCap = window.claude.use('downloads').catch(() => null); } catch (e) { dlCap = null; }
+
+/* ---------- formatting ---------- */
+const fmtCd = x => !Number.isFinite(x) ? '–' : x >= 100 ? Math.round(x).toLocaleString('en-US') : x >= 10 ? x.toFixed(1) : x.toFixed(2);
+const fmtPct = (x, d=1) => !Number.isFinite(x) ? '–' : (x >= 0 ? '+' : '−') + Math.abs(x*100).toFixed(d) + '%';
+const fmtAng = (a, pos, neg, zero) => { if (Math.abs(a) < 1e-9) return zero; return (+Math.abs(a).toFixed(2)) + (a > 0 ? pos : neg); };
+const fmtPos = (h, v) => `${fmtAng(v,'U','D','H')} · ${fmtAng(h,'R','L','V')}`;
+const fmtShift = (dh, dv) => `${Math.abs(dh).toFixed(2)}°${dh >= 0 ? 'R' : 'L'}  ${Math.abs(dv).toFixed(2)}°${dv >= 0 ? 'U' : 'D'}`;
+function toast(msg){ const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(() => t.hidden = true, 3200); }
+function tok(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+
+/* ---------- options ---------- */
+function readOpts(){
+  const n = (id, d) => { const x = parseFloat($(id).value); return Number.isFinite(x) ? x : d; };
+  return {
+    hmin: n('hmin', -30), hmax: n('hmax', 30), vmin: n('vmin', -10), vmax: n('vmax', 10), step: n('step', 0.1),
+    mirM: $('mirMeas').checked, mirS: $('mirSim').checked,
+    alignMode: $('alignMode').value, dh: n('dh', 0), dv: n('dv', 0), fitRange: Math.min(5, Math.max(0.5, n('fitRange', 2))),
+    scaleMode: $('scaleMode').value, k: n('k', 1), maskPct: Math.max(0, n('maskPct', 1)), tolPct: Math.max(0.1, n('tolPct', 15))
+  };
+}
+function syncAlignInputs(){
+  const am = $('alignMode').value, sm = $('scaleMode').value;
+  $('dh').disabled = $('dv').disabled = am !== 'manual';
+  $('fitRange').disabled = am !== 'fit';
+  $('k').disabled = sm !== 'manual';
+}
+
+/* ---------- data loading ---------- */
+function describe(ds){
+  return `${ds.name}\n${ds.format}${ds.typeLabel ? ' · ' + ds.typeLabel : ''} · ${ds.nValues.toLocaleString('en-US')} values`;
+}
+function setDs(which, ds, raw){
+  st[which] = ds; st.raw[which] = raw || null; st.fitCache = null; st.isDemo = ds.format === 'demo' && (st[which === 'meas' ? 'sim' : 'meas'] || {}).format === 'demo';
+  const el = $(which === 'meas' ? 'infoMeas' : 'infoSim');
+  el.classList.remove('err'); el.textContent = describe(ds); el.style.whiteSpace = 'pre-line';
+}
+function loadFile(which, file){
+  const reader = new FileReader();
+  reader.onload = () => {
+    const el = $(which === 'meas' ? 'infoMeas' : 'infoSim');
+    try {
+      const rowsAreH = $(which === 'meas' ? 'csvHMeas' : 'csvHSim').checked;
+      const ds = BC.parseFile(String(reader.result), file.name, { rowsAreH });
+      setDs(which, ds, { text: String(reader.result), name: file.name });
+      schedule();
+    } catch (e){ el.classList.add('err'); el.textContent = `${file.name}: ${e.message}`; }
+  };
+  reader.onerror = () => toast('That file could not be read.');
+  reader.readAsText(file);
+}
+function reparse(which){
+  const raw = st.raw[which]; if (!raw) return;
+  try {
+    const ds = BC.parseFile(raw.text, raw.name, { rowsAreH: $(which === 'meas' ? 'csvHMeas' : 'csvHSim').checked });
+    setDs(which, ds, raw); schedule();
+  } catch (e){ const el = $(which === 'meas' ? 'infoMeas' : 'infoSim'); el.classList.add('err'); el.textContent = e.message; }
+}
+function loadDemo(){
+  const f = FUNCS[st.func];
+  const d = BC.demoPair(f.demo[0], f.demo[1]);
+  setDs('meas', d.meas); setDs('sim', d.sim); st.isDemo = true;
+  schedule();
+}
+function applyFunction(key, reloadDemo){
+  st.func = key; const f = FUNCS[key];
+  [$('hmin').value, $('hmax').value, $('vmin').value, $('vmax').value] = f.win;
+  $('step').value = String(f.step);
+  $('funcNote').textContent = f.note;
+  [st.sliceH, st.sliceV] = f.slice;
+  st.cut = f.cut ? { side:f.cut.side, scans:f.cut.scans.slice(), gAt:f.cut.gAt, gMin:f.cut.gMin, linTol:f.cut.linTol, simAligned:false } : null;
+  st.cutRes = null;
+  $('tabCut').hidden = !f.cut;
+  if (!f.cut && st.view === 'cutoff') st.view = 'ratio';
+  $('viewbar').dataset.view = '';
+  $('tpPreset').value = 'func';
+  setPoints((BC.PRESETS[f.pts] || []).map(p => Object.assign({}, p)));
+  st.fitCache = null;
+  if (reloadDemo && (st.isDemo || !st.meas || !st.sim)) loadDemo(); else schedule();
+}
+function recomputeCut(){
+  st.cutRes = null;
+  if (!st.res || !st.cut) return;
+  try { st.cutRes = BC.cutoffAnalysis(st.res, Object.assign({}, st.cut, { thrPct: Math.max(0.5, st.opts.maskPct) })); } catch (e){ st.cutRes = null; }
+}
+
+/* ---------- compute ---------- */
+let timer = null;
+function schedule(){
+  clearTimeout(timer);
+  timer = setTimeout(run, 180);
+}
+function run(){
+  syncAlignInputs();
+  if (!st.meas || !st.sim){ renderEmpty(); return; }
+  const o = readOpts();
+  const needsFit = o.alignMode === 'fit';
+  $('alignNote').innerHTML = needsFit ? '<span class="busy">Fitting alignment…</span>' : '';
+  setTimeout(() => {
+    try {
+      const res = BC.compute(st.meas, st.sim, o, st.points, st.fitCache);
+      if (res.fit) st.fitCache = { key: res.fitKey, fit: res.fit };
+      st.res = res; st.opts = o;
+      if (o.alignMode !== 'manual'){ $('dh').value = res.dh.toFixed(3); $('dv').value = res.dv.toFixed(3); }
+      if (o.scaleMode !== 'manual') $('k').value = res.k.toFixed(4);
+      $('alignNote').textContent = `Simulation shifted ${fmtShift(res.dh, res.dv)} and scaled ×${res.k.toFixed(3)}.` + (res.fit && !res.fit.ok ? ' Best fit did not converge; check the window or mask.' : '');
+      recomputeCut();
+      renderKPIs(); renderView(); renderTable();
+    } catch (e){
+      st.res = null; $('alignNote').textContent = ''; renderEmpty(e.message);
+    }
+  }, needsFit ? 30 : 0);
+}
+
+/* ---------- KPIs ---------- */
+function renderKPIs(){
+  const r = st.res, o = st.opts, tol = o.tolPct;
+  const cls = (x, a, b) => !Number.isFinite(x) ? '' : x <= a ? 'good' : x <= b ? 'warn' : 'bad';
+  const rmsPct = Math.pow(2, r.rms) - 1, biasPct = Math.pow(2, r.mean) - 1;
+  const cnt = s => r.pts.filter(p => p['j' + s].st === 'pass').length, judged = r.pts.filter(p => p.jm.st !== 'na').length;
+  const imaxD = r.Mmax / r.Smax - 1;
+  const items = [
+    ['Offset applied', fmtShift(r.dh, r.dv), o.alignMode === 'none' ? 'no alignment' : o.alignMode === 'fit' ? 'best fit' : o.alignMode === 'imax' ? 'hot-spot centroid' : 'manual', ''],
+    ['Scale factor k', '×' + r.k.toFixed(3), o.scaleMode === 'flux' ? `flux in window: meas ÷ sim` : o.scaleMode === 'imax' ? 'Imax meas ÷ sim' : o.scaleMode === 'manual' ? 'manual' : 'absolute values', ''],
+    ['Imax measured', fmtCd(r.Mmax) + ' cd', fmtPos(r.MmaxAt[0], r.MmaxAt[1]), ''],
+    ['Imax simulated', fmtCd(r.Smax) + ' cd', `${fmtPos(r.SmaxAt[0], r.SmaxAt[1])} · ${fmtPct(imaxD)}`, ''],
+    ['Flux in window', `${r.phiM.toFixed(0)} / ${r.phiS0.toFixed(0)} lm`, `measured / raw sim · ${fmtPct(r.phiM/r.phiS0 - 1)}`, ''],
+    ['RMS deviation', '±' + (rmsPct*100).toFixed(1) + '%', `bias ${fmtPct(biasPct)} · ${r.n.toLocaleString('en-US')} cells`, cls(rmsPct*100, tol, 2*tol)],
+    [`Within ±${tol}%`, (r.inTol*100).toFixed(1) + '%', 'of unmasked cells', cls(100 - r.inTol*100, 30, 60)],
+    ['Correlation r', Number.isFinite(r.r) ? r.r.toFixed(4) : '–', 'log₁₀ intensities', cls(1 - r.r, 0.01, 0.05)],
+    ['Points passing', judged ? `${cnt('m')} / ${cnt('s')} of ${judged}` : '–', 'measured / simulated', judged && (cnt('m') < judged) ? 'bad' : judged ? 'good' : '']
+  ];
+  const cr = st.cutRes;
+  if (cr){
+    const gm = cr.gScan.m.g, gs = cr.gScan.s.g, gMin = st.cut.gMin;
+    const ok = gMin == null ? '' : (gm >= gMin && gs >= gMin) ? 'good' : 'bad';
+    items.splice(5, 0, ['Cut-off sharpness G', `${Number.isFinite(gm) ? gm.toFixed(2) : '–'} / ${Number.isFinite(gs) ? gs.toFixed(2) : '–'}`,
+      `meas / sim at ${fmtAng(st.cut.gAt, 'R', 'L', 'V-V')}${gMin != null ? ', min ' + gMin : ''}`, ok]);
+  }
+  $('kpis').innerHTML = items.map(([k, v, d, c]) => `<div class="kpi"><div class="k">${k}</div><div class="v ${c}">${v}</div><div class="d">${d}</div></div>`).join('');
+}
+function renderEmpty(msg){
+  $('kpis').innerHTML = `<div class="kpi" style="grid-column:1/-1"><div class="k">Status</div><div class="d" style="font-size:14px;color:var(--ink)">${msg ? msg : 'Load a measured and a simulated file, or the demo pair, to start.'}</div></div>`;
+  $('plots').innerHTML = ''; $('plotNote').textContent = ''; $('tpTable').innerHTML = ''; $('viewExtra').innerHTML = '';
+}
+
+/* ---------- plots ---------- */
+function themeColors(forReport){
+  if (forReport) return { ink:'#1B2025', ink2:'#56616B', line:'#D6DBDD', panel:'#FFFFFF', meas:'#B4530B', sim:'#3B57C4', mid:'#F4F2EC', neg:'#2F5FB0', pos:'#C2410C' };
+  return { ink:tok('--ink'), ink2:tok('--ink-2'), line:tok('--line'), panel:tok('--panel'), meas:tok('--meas'), sim:tok('--sim'), mid:tok('--div-mid'), neg:tok('--div-neg'), pos:tok('--div-pos') };
+}
+function baseLayout(c, extra){
+  return Object.assign({
+    paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:c.panel,
+    font:{ family:'IBM Plex Sans, system-ui, sans-serif', size:12, color:c.ink },
+    margin:{ l:56, r:20, t:34, b:46 },
+    xaxis:{ title:{ text:'H (°)   L ← → R', font:{ size:12, color:c.ink2 } }, gridcolor:c.line, zerolinecolor:c.ink2, zerolinewidth:1, linecolor:c.line, tickcolor:c.line, ticks:'outside' },
+    yaxis:{ title:{ text:'V (°)', font:{ size:12, color:c.ink2 } }, gridcolor:c.line, zerolinecolor:c.ink2, zerolinewidth:1, linecolor:c.line, tickcolor:c.line, ticks:'outside' },
+    hoverlabel:{ font:{ family:'IBM Plex Mono, monospace', size:12 } },
+    showlegend:false
+  }, extra || {});
+}
+const CFG = { displaylogo:false, responsive:true, modeBarButtonsToRemove:['lasso2d','select2d','autoScale2d','toggleSpikelines'] };
+const nullify = Z => Z.map(r => Array.from(r, x => Number.isFinite(x) ? x : null));
+const logZ = Z => Z.map(r => Array.from(r, x => x > 0 ? Math.log10(x) : null));
+const FALSE_COLOR = [[0,'#0d0887'],[0.15,'#3b49c4'],[0.3,'#1f8fd6'],[0.45,'#1fbfa9'],[0.6,'#7fd34e'],[0.75,'#f2d43a'],[0.88,'#f2852c'],[1,'#c81e1e']];
+
+function pointsTrace(c){
+  const p = st.res.pts;
+  return { type:'scatter', mode:'markers+text', x:p.map(q=>q.h), y:p.map(q=>q.v), text:p.map(q=>q.name), textposition:'top center',
+    textfont:{ size:10, color:c.ink }, marker:{ symbol:'x-thin', size:8, line:{ width:1.5, color:c.ink } }, hoverinfo:'text',
+    hovertext:p.map(q => `${q.name}  ${fmtPos(q.h,q.v)}<br>meas ${fmtCd(q.m)} cd<br>sim ${fmtCd(q.s)} cd<br>Δ ${fmtPct(q.delta)}`) };
+}
+function isoLevels(){
+  const r = st.res;
+  const txt = st.isoLevels.trim();
+  if (txt){ const v = txt.split(/[\s,;]+/).map(Number).filter(x => x > 0).sort((a,b)=>a-b); if (v.length) return v; }
+  const std = [125, 250, 500, 1000, 2500, 5000, 10000, 20000, 40000, 80000];
+  return std.filter(x => x < 0.95*Math.max(r.Mmax, r.Smax) && x > r.thr);
+}
+function levelColor(i, n){ const t = n <= 1 ? 0.5 : i/(n-1); const stops = FALSE_COLOR; let k = 0; while (k < stops.length-2 && t > stops[k+1][0]) k++; return stops[k+1][1]; }
+
+function figRatio(c){
+  const r = st.res, span = st.ratioSpan;
+  const cust = r.M.map((row, j) => Array.from(row, (m, i) => [m, r.S[j][i]]));
+  const lev = isoLevels();
+  const data = [{ type:'heatmap', x:r.hs, y:r.vs, z:nullify(r.R), zmin:-span, zmax:span, zsmooth:false,
+      colorscale:[[0,c.neg],[0.5,c.mid],[1,c.pos]], customdata:cust,
+      hovertemplate:'H %{x:.2f}°  V %{y:.2f}°<br>meas %{customdata[0]:,.0f} cd<br>sim %{customdata[1]:,.0f} cd<br>meas/sim ×%{text}<extra></extra>',
+      text: r.R.map(row => Array.from(row, x => Number.isFinite(x) ? Math.pow(2, x).toFixed(3) : '–')),
+      colorbar:{ title:{ text:'meas / sim', side:'right', font:{ size:11, color:c.ink2 } }, thickness:12, outlinewidth:0, tickfont:{ color:c.ink2 },
+        tickvals:[-span, -span/2, 0, span/2, span], ticktext:[-span, -span/2, 0, span/2, span].map(x => '×' + (+Math.pow(2, x).toFixed(2))) } }];
+  lev.forEach(L => { const s = BC.contourSegs(r.hs, r.vs, r.M, L); data.push({ type:'scatter', mode:'lines', x:s.x, y:s.y, line:{ color:c.ink2, width:0.7 }, hoverinfo:'skip', connectgaps:false }); });
+  data.push(pointsTrace(c));
+  return { data, layout: baseLayout(c, { title:{ text:'Measured ÷ simulated (masked below ' + st.opts.maskPct + '% Imax)', font:{ size:13, color:c.ink }, x:0.01, xanchor:'left' } }) };
+}
+function figIso(c, which){
+  const r = st.res, Z = which === 'M' ? r.M : r.S;
+  const top = Math.log10(Math.max(r.Mmax, r.Smax)), bot = Math.max(0, top - 3.3);
+  const ticks = [1, 10, 100, 1000, 10000, 100000].filter(x => Math.log10(x) >= bot - 1e-6 && Math.log10(x) <= top + 1e-6);
+  const data = [{ type:'heatmap', x:r.hs, y:r.vs, z:logZ(Z), zmin:bot, zmax:top, zsmooth:false, colorscale:FALSE_COLOR,
+    customdata: nullify(Z), hovertemplate:'H %{x:.2f}°  V %{y:.2f}°<br>%{customdata:,.0f} cd<extra></extra>',
+    colorbar:{ title:{ text:'cd', side:'right', font:{ size:11, color:c.ink2 } }, thickness:12, outlinewidth:0, tickfont:{ color:c.ink2 },
+      tickvals: ticks.map(Math.log10), ticktext: ticks.map(x => x.toLocaleString('en-US')) } }];
+  isoLevels().forEach(L => { const s = BC.contourSegs(r.hs, r.vs, Z, L); data.push({ type:'scatter', mode:'lines', x:s.x, y:s.y, line:{ color:'rgba(255,255,255,0.55)', width:0.7 }, hoverinfo:'skip' }); });
+  data.push(pointsTrace(c));
+  const title = which === 'M' ? 'Measured' : `Simulated (shifted ${fmtShift(r.dh, r.dv)}, ×${r.k.toFixed(3)})`;
+  return { data, layout: baseLayout(c, { title:{ text:title, font:{ size:13, color:c.ink }, x:0.01, xanchor:'left' } }) };
+}
+function figOverlay(c){
+  const r = st.res, lev = isoLevels(), data = [];
+  lev.forEach((L, i) => {
+    const col = levelColor(i, lev.length);
+    const a = BC.contourSegs(r.hs, r.vs, r.M, L), b = BC.contourSegs(r.hs, r.vs, r.S, L);
+    data.push({ type:'scatter', mode:'lines', x:a.x, y:a.y, name: L.toLocaleString('en-US') + ' cd', legendgroup:'L' + i, line:{ color:col, width:1.8 }, hoverinfo:'skip' });
+    data.push({ type:'scatter', mode:'lines', x:b.x, y:b.y, name: L + ' sim', legendgroup:'L' + i, showlegend:false, line:{ color:col, width:1.4, dash:'dash' }, hoverinfo:'skip' });
+  });
+  data.push(pointsTrace(c));
+  return { data, layout: baseLayout(c, { showlegend:true, legend:{ orientation:'h', y:-0.2, font:{ size:11, color:c.ink2 } }, margin:{ l:56, r:20, t:34, b:80 },
+    title:{ text:'Isocandela overlay: measured solid, simulated dashed', font:{ size:13, color:c.ink }, x:0.01, xanchor:'left' } }) };
+}
+function figSlices(c){
+  const r = st.res, sl = BC.slices(r, st.sliceH, st.sliceV);
+  const yax = { type: st.logY ? 'log' : 'linear', title:{ text:'cd', font:{ size:12, color:c.ink2 } }, gridcolor:c.line, linecolor:c.line, tickcolor:c.line, ticks:'outside', exponentformat:'none' };
+  const fH = { data:[
+      { type:'scatter', mode:'lines', x:sl.hh, y:sl.hM.map(x => x > 0 ? x : null), name:'Measured', line:{ color:c.meas, width:2 } },
+      { type:'scatter', mode:'lines', x:sl.hh, y:sl.hS.map(x => x > 0 ? x : null), name:'Simulated', line:{ color:c.sim, width:2, dash:'dash' } } ],
+    layout: baseLayout(c, { showlegend:true, legend:{ orientation:'h', y:1.12, x:1, xanchor:'right', font:{ size:11 } }, yaxis:yax, hovermode:'x unified',
+      title:{ text:`Horizontal scan at V = ${fmtAng(st.sliceV,'U','D','0')}`, font:{ size:13, color:c.ink }, x:0.01, xanchor:'left' } }) };
+  const shapes = [sl.gM, sl.gS].map((g, i) => Number.isFinite(g.v) ? { type:'line', x0:g.v, x1:g.v, yref:'paper', y0:0, y1:1, line:{ color: i ? c.sim : c.meas, width:1, dash:'dot' } } : null).filter(Boolean);
+  const fV = { data:[
+      { type:'scatter', mode:'lines', x:sl.vv, y:sl.vM.map(x => x > 0 ? x : null), name:'Measured', line:{ color:c.meas, width:2 } },
+      { type:'scatter', mode:'lines', x:sl.vv, y:sl.vS.map(x => x > 0 ? x : null), name:'Simulated', line:{ color:c.sim, width:2, dash:'dash' } } ],
+    layout: baseLayout(c, { showlegend:false, yaxis:yax, shapes, hovermode:'x unified',
+      xaxis:{ title:{ text:'V (°)   D ← → U', font:{ size:12, color:c.ink2 } }, gridcolor:c.line, zerolinecolor:c.ink2, linecolor:c.line, ticks:'outside', tickcolor:c.line },
+      title:{ text:`Vertical scan at H = ${fmtAng(st.sliceH,'R','L','0')}`, font:{ size:13, color:c.ink }, x:0.01, xanchor:'left' } }) };
+  return { fH, fV, sl };
+}
+
+const fmtDeg = (x, pos, neg) => !Number.isFinite(x) ? '–' : Math.abs(x) < 0.0005 ? '0.000°' : Math.abs(x).toFixed(3) + '°' + (x > 0 ? pos : neg);
+const scanLabel = h => fmtAng(h, 'R', 'L', 'V-V');
+function figCutTrace(c){
+  const cr = st.cutRes, num = a => a.map(x => Number.isFinite(x) ? x : null);
+  const data = [
+    { type:'scatter', mode:'lines', x:cr.tH, y:num(cr.trM), name:'Measured', line:{ color:c.meas, width:2 }, hovertemplate:'H %{x:.2f}°  β %{y:.3f}°<extra>measured</extra>' },
+    { type:'scatter', mode:'lines', x:cr.tH, y:num(cr.trS), name:'Simulated', line:{ color:c.sim, width:2, dash:'dash' }, hovertemplate:'H %{x:.2f}°  β %{y:.3f}°<extra>simulated</extra>' },
+    { type:'scatter', mode:'markers', x:cr.scans.map(s => s.h), y:cr.scans.map(s => s.m.beta), marker:{ color:c.meas, size:8 }, showlegend:false, hoverinfo:'skip' },
+    { type:'scatter', mode:'markers', x:cr.scans.map(s => s.h), y:cr.scans.map(s => s.s.beta), marker:{ color:c.sim, size:8, symbol:'circle-open', line:{ width:2 } }, showlegend:false, hoverinfo:'skip' }
+  ];
+  [['M', c.meas, 'measured'], ['S', c.sim, 'simulated']].forEach(([k, col, nm]) => {
+    const e = cr['elbow' + k]; if (e) data.push({ type:'scatter', mode:'markers', x:[e.h], y:[e.v], marker:{ symbol:'diamond-open', size:12, color:col, line:{ width:2 } }, showlegend:false, hovertemplate:`elbow ${nm}: H %{x:.2f}°<extra></extra>` });
+  });
+  const shapes = cr.scans.map(s => ({ type:'line', x0:s.h, x1:s.h, yref:'paper', y0:0, y1:1, line:{ color:c.ink2, width:1, dash:'dot' } }));
+  const all = cr.trM.concat(cr.trS).filter(Number.isFinite);
+  const lo = all.length ? Math.min(...all) : -1, hi = all.length ? Math.max(...all) : 1;
+  return { data, layout: baseLayout(c, { showlegend:true, legend:{ orientation:'h', y:1.12, x:1, xanchor:'right', font:{ size:11 } }, shapes,
+    yaxis:{ title:{ text:'cut-off position β (°)', font:{ size:12, color:c.ink2 } }, range:[lo - 0.3, Math.min(hi, lo + 3) + 0.3], gridcolor:c.line, zerolinecolor:c.ink2, linecolor:c.line, ticks:'outside', tickcolor:c.line },
+    title:{ text:'Cut-off line: steepest-gradient trace' + (st.cut.simAligned ? '' : ' (simulation as simulated)'), font:{ size:13, color:c.ink }, x:0.01, xanchor:'left' } }) };
+}
+function figCutG(c){
+  const cr = st.cutRes, g = cr.gScan, gMin = st.cut.gMin;
+  const data = [
+    { type:'scatter', mode:'lines', x:g.m.prof.v, y:g.m.prof.g, name:'Measured', line:{ color:c.meas, width:2 }, connectgaps:false, hovertemplate:'β %{x:.2f}°  G %{y:.3f}<extra>measured</extra>' },
+    { type:'scatter', mode:'lines', x:g.s.prof.v, y:g.s.prof.g, name:'Simulated', line:{ color:c.sim, width:2, dash:'dash' }, connectgaps:false, hovertemplate:'β %{x:.2f}°  G %{y:.3f}<extra>simulated</extra>' }
+  ];
+  const shapes = [];
+  if (gMin != null) shapes.push({ type:'line', xref:'paper', x0:0, x1:1, y0:gMin, y1:gMin, line:{ color:c.ink2, width:1, dash:'dash' } });
+  [[g.m, c.meas], [g.s, c.sim]].forEach(([s, col]) => { if (Number.isFinite(s.beta)) shapes.push({ type:'line', x0:s.beta, x1:s.beta, yref:'paper', y0:0, y1:1, line:{ color:col, width:1, dash:'dot' } }); });
+  const vals = g.m.prof.v.filter((v, i) => g.m.prof.g[i] != null || g.s.prof.g[i] != null);
+  const xr = vals.length ? [Math.min(...vals) - 0.2, Math.max(...vals) + 0.2] : undefined;
+  return { data, layout: baseLayout(c, { showlegend:false, shapes,
+    xaxis:{ title:{ text:'V (°)   D ← → U', font:{ size:12, color:c.ink2 } }, range:xr, gridcolor:c.line, zerolinecolor:c.ink2, linecolor:c.line, ticks:'outside', tickcolor:c.line },
+    yaxis:{ title:{ text:'G = log I(β) − log I(β+0.1°)', font:{ size:12, color:c.ink2 } }, rangemode:'tozero', gridcolor:c.line, linecolor:c.line, ticks:'outside', tickcolor:c.line },
+    title:{ text:`Gradient profile at ${scanLabel(st.cut.gAt)}` + (gMin != null ? ` (dashed: G min ${gMin})` : ''), font:{ size:13, color:c.ink }, x:0.01, xanchor:'left' } }) };
+}
+function cutRows(){
+  const cr = st.cutRes, cut = st.cut, rows = [];
+  const pill = ok => ok == null ? '<span class="pill na">–</span>' : `<span class="pill ${ok ? 'pass' : 'fail'}">${ok ? 'Pass' : 'Fail'}</span>`;
+  const d3 = (a, b) => Number.isFinite(a) && Number.isFinite(b) ? (a - b >= 0 ? '+' : '−') + Math.abs(a - b).toFixed(3) : '–';
+  cr.scans.forEach(s => rows.push([`Cut-off position β at ${scanLabel(s.h)}`, fmtDeg(s.m.beta, 'U', 'D'), fmtDeg(s.s.beta, 'U', 'D'), d3(s.m.beta, s.s.beta) + '°', '–', null, null]));
+  const gm = cr.gScan.m.g, gs = cr.gScan.s.g;
+  rows.push([`Sharpness G at ${scanLabel(cut.gAt)}`, Number.isFinite(gm) ? gm.toFixed(3) : '–', Number.isFinite(gs) ? gs.toFixed(3) : '–', d3(gm, gs),
+    cut.gMin != null ? '≥ ' + cut.gMin : '–', cut.gMin != null && Number.isFinite(gm) ? gm >= cut.gMin : null, cut.gMin != null && Number.isFinite(gs) ? gs >= cut.gMin : null]);
+  if (cr.scans.length >= 2){
+    const span = `${scanLabel(cr.scans[0].h)} to ${scanLabel(cr.scans[cr.scans.length - 1].h)}`;
+    rows.push([`Linearity, β spread ${span}`, Number.isFinite(cr.linM) ? cr.linM.toFixed(3) + '°' : '–', Number.isFinite(cr.linS) ? cr.linS.toFixed(3) + '°' : '–', d3(cr.linM, cr.linS) + '°',
+      cut.linTol != null ? '≤ ' + cut.linTol + '°' : '–', cut.linTol != null && Number.isFinite(cr.linM) ? cr.linM <= cut.linTol : null, cut.linTol != null && Number.isFinite(cr.linS) ? cr.linS <= cut.linTol : null]);
+  }
+  if (cut.side !== 'both'){
+    const em = cr.elbowM, es = cr.elbowS;
+    rows.push(['Elbow position H', em ? fmtDeg(em.h, 'R', 'L') : '–', es ? fmtDeg(es.h, 'R', 'L') : '–', em && es ? d3(em.h, es.h) + '°' : '–', '–', null, null]);
+    rows.push(['Shoulder angle', em ? em.slope.toFixed(1) + '°' : '–', es ? es.slope.toFixed(1) + '°' : '–', em && es ? (Math.abs(em.slope - es.slope) < 0.05 ? '0.0' : (em.slope - es.slope > 0 ? '+' : '−') + Math.abs(em.slope - es.slope).toFixed(1)) + '°' : '–', '–', null, null]);
+  }
+  return { rows, pill };
+}
+function renderCutTable(){
+  const cr = st.cutRes; if (!cr){ $('viewExtra').innerHTML = ''; return; }
+  const { rows, pill } = cutRows();
+  const vr = st.res.vRes, warn = [];
+  if (vr.m > 0.1) warn.push(`measured data has ${(+vr.m.toFixed(3))}° vertical resolution`);
+  if (vr.s > 0.1) warn.push(`simulated data has ${(+vr.s.toFixed(3))}° vertical resolution`);
+  $('viewExtra').innerHTML = (warn.length ? `<p class="warnline">G and β are resolution-limited: ${warn.join(' and ')}. Use 0.05° to 0.1° data around the cut-off for a fair comparison.</p>` : '') +
+    `<div class="tablewrap"><table><thead><tr><th>Cut-off metric</th><th>Measured</th><th>Simulated</th><th>Meas − sim</th><th>Limit</th><th>Measured</th><th>Simulated</th></tr></thead><tbody>` +
+    rows.map(r => `<tr><td>${r[0]}</td><td class="mono">${r[1]}</td><td class="mono">${r[2]}</td><td class="mono">${r[3]}</td><td class="mono">${r[4]}</td><td>${pill(r[5])}</td><td>${pill(r[6])}</td></tr>`).join('') + '</tbody></table></div>';
+}
+
+function plotDivs(n){
+  const box = $('plots'); box.className = 'plots' + (n === 2 ? ' two' : '');
+  if (box.children.length !== n){ box.innerHTML = Array.from({ length:n }, (_, i) => `<div class="plotbox"><div class="plot" id="pl${i}"></div></div>`).join(''); }
+  return Array.from({ length:n }, (_, i) => $('pl' + i));
+}
+function renderViewbar(){
+  const v = st.view, vb = $('viewbar');
+  if (v === 'ratio') vb.innerHTML = `<label class="f">Colour range<select id="vbSpan"><option value="0.32">×0.8 – ×1.25</option><option value="0.58">×0.67 – ×1.5</option><option value="1">×0.5 – ×2</option><option value="2">×0.25 – ×4</option></select></label><label class="f">Iso lines (cd)<input id="vbLev" type="text" placeholder="auto" style="width:160px;font-family:var(--f-mono);font-size:13px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink)"></label>`;
+  else if (v === 'iso' || v === 'overlay') vb.innerHTML = `<label class="f">Iso lines (cd)<input id="vbLev" type="text" placeholder="auto" style="width:200px;font-family:var(--f-mono);font-size:13px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink)"></label>`;
+  else if (v === 'cutoff') vb.innerHTML = `<label class="f">Scans at H (°)<input id="cbScans" type="text" style="width:170px"></label><label class="f">G check at H (°)<input id="cbGAt" type="number" step="0.5"></label><label class="f">Min G<input id="cbGMin" type="number" step="0.01" placeholder="none"></label><label class="f">Linearity max (°)<input id="cbLin" type="number" step="0.05" placeholder="none"></label><label class="f">Simulation<select id="cbAl"><option value="raw">As simulated</option><option value="al">Aligned</option></select></label>`;
+  else vb.innerHTML = `<label class="f">Horizontal scan at V (°)<input id="vbSV" type="number" step="0.01"></label><label class="f">Vertical scan at H (°)<input id="vbSH" type="number" step="0.01"></label><label class="ck"><input type="checkbox" id="vbLog">Log scale</label><span class="hint" style="margin:0">Dotted lines mark the steepest gradient (cut-off) on the vertical scan.</span>`;
+  if (v === 'cutoff' && st.cut){
+    const cut = st.cut;
+    $('cbScans').value = cut.scans.join(', '); $('cbGAt').value = cut.gAt;
+    $('cbGMin').value = cut.gMin == null ? '' : cut.gMin; $('cbLin').value = cut.linTol == null ? '' : cut.linTol;
+    $('cbAl').value = cut.simAligned ? 'al' : 'raw';
+    const upd = () => {
+      const sc = $('cbScans').value.split(/[\s,;]+/).map(Number).filter(Number.isFinite);
+      if (sc.length) cut.scans = sc;
+      const g = parseFloat($('cbGAt').value); if (Number.isFinite(g)) cut.gAt = g;
+      const gm = parseFloat($('cbGMin').value); cut.gMin = Number.isFinite(gm) ? gm : null;
+      const lt = parseFloat($('cbLin').value); cut.linTol = Number.isFinite(lt) ? lt : null;
+      cut.simAligned = $('cbAl').value === 'al';
+      recomputeCut(); renderKPIs(); renderView();
+    };
+    ['cbScans', 'cbGAt', 'cbGMin', 'cbLin', 'cbAl'].forEach(id => $(id).addEventListener('change', upd));
+  }
+  const span = $('vbSpan'); if (span){ span.value = String(st.ratioSpan); span.onchange = () => { st.ratioSpan = +span.value; renderView(); }; }
+  const lev = $('vbLev'); if (lev){ lev.value = st.isoLevels; lev.onchange = () => { st.isoLevels = lev.value; renderView(); }; }
+  const sv = $('vbSV'); if (sv){ sv.value = st.sliceV; sv.onchange = () => { st.sliceV = parseFloat(sv.value) || 0; renderView(); }; }
+  const sh = $('vbSH'); if (sh){ sh.value = st.sliceH; sh.onchange = () => { st.sliceH = parseFloat(sh.value) || 0; renderView(); }; }
+  const lg = $('vbLog'); if (lg){ lg.checked = st.logY; lg.onchange = () => { st.logY = lg.checked; renderView(); }; }
+}
+function renderView(){
+  if (!st.res) return;
+  if (!hasPlotly){ $('plots').innerHTML = '<div class="plotbox" style="padding:16px">The plotting library could not load, so charts are unavailable. Statistics and the table below still work.</div>'; return; }
+  const c = themeColors(false), v = st.view;
+  document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.view === v)));
+  if (!$('viewbar').dataset.view || $('viewbar').dataset.view !== v){ $('viewbar').dataset.view = v; renderViewbar(); }
+  let note = '';
+  $('viewExtra').innerHTML = '';
+  if (v === 'ratio'){ const [d] = plotDivs(1); const f = figRatio(c); Plotly.react(d, f.data, f.layout, CFG);
+    note = 'Orange: measurement brighter than simulation. Blue: measurement darker. Grey lines are measured isocandelas: ' + isoLevels().map(x => x.toLocaleString('en-US')).join(', ') + ' cd.'; }
+  else if (v === 'iso'){ const [a, b] = plotDivs(2); const f1 = figIso(c, 'M'), f2 = figIso(c, 'S'); Plotly.react(a, f1.data, f1.layout, CFG); Plotly.react(b, f2.data, f2.layout, CFG);
+    note = 'Both plots share one colour scale. Lines: ' + isoLevels().map(x => x.toLocaleString('en-US')).join(', ') + ' cd.'; }
+  else if (v === 'overlay'){ const [d] = plotDivs(1); const f = figOverlay(c); Plotly.react(d, f.data, f.layout, CFG);
+    note = 'Where a dashed line sits outside its solid partner, the simulation predicts that level further out than measured.'; }
+  else if (v === 'cutoff'){
+    if (!st.cutRes){ plotDivs(0); $('plotNote').textContent = 'No cut-off could be analysed in this window.'; $('viewExtra').innerHTML = ''; return; }
+    const [a, b] = plotDivs(2); const f1 = figCutTrace(c), f2 = figCutG(c);
+    Plotly.react(a, f1.data, f1.layout, CFG); Plotly.react(b, f2.data, f2.layout, CFG);
+    note = st.cut.simAligned
+      ? 'Simulation shown after the alignment offset, so position differences are what remains after best fit.'
+      : `Simulation shown in its own coordinates, so β and elbow differences include the aim offset (fit found ${fmtShift(st.res.dh, st.res.dv)}). Sharpness G is not affected by offset or scale.`;
+    $('plotNote').textContent = note; renderCutTable(); return;
+  }
+  else { const [a, b] = plotDivs(2); const f = figSlices(c); Plotly.react(a, f.fH.data, f.fH.layout, CFG); Plotly.react(b, f.fV.data, f.fV.layout, CFG);
+    const g = f.sl; note = Number.isFinite(g.gM.v) && Number.isFinite(g.gS.v)
+      ? `Steepest gradient on the vertical scan: measured G = ${g.gM.g.toFixed(2)} at ${fmtAng(g.gM.v,'U','D','0')}, simulated G = ${g.gS.g.toFixed(2)} at ${fmtAng(g.gS.v,'U','D','0')} (Δ ${(g.gM.v - g.gS.v).toFixed(2)}°). G = log₁₀ I(β) − log₁₀ I(β+0.1°).`
+      : 'No cut-off gradient found on this vertical scan above the mask threshold.'; }
+  $('plotNote').textContent = note;
+}
+
+/* ---------- table ---------- */
+function limText(p){
+  const lo = p.min != null ? '≥ ' + fmtCd(p.min) : p.minRel != null ? `≥ ${+(p.minRel*100).toFixed(1)}% Imax` : '';
+  const hi = p.max != null ? '≤ ' + fmtCd(p.max) : p.maxRel != null ? `≤ ${+(p.maxRel*100).toFixed(1)}% Imax` : '';
+  return [lo, hi].filter(Boolean).join('  ') || '–';
+}
+function renderTable(){
+  const r = st.res, tol = st.opts.tolPct/100;
+  const pill = j => j.st === 'na' ? '<span class="pill na">–</span>' : `<span class="pill ${j.st}">${j.st === 'pass' ? 'Pass' : 'Fail'}</span>`;
+  const lim = limText;
+  const dcls = d => !Number.isFinite(d) ? '' : Math.abs(d) <= tol ? 'good' : Math.abs(d) <= 2*tol ? 'warn' : 'bad';
+  const margin = j => Number.isFinite(j.margin) ? fmtPct(j.margin, 0) : '';
+  $('tpTable').innerHTML = `<thead><tr><th>Point</th><th>Position</th><th>Measured cd</th><th>Simulated cd</th><th>Meas vs sim</th><th>Limit</th><th>Measured</th><th>Simulated</th></tr></thead><tbody>` +
+    (r.pts.length ? r.pts.map(p => `<tr><td><strong>${p.name}</strong></td><td>${fmtPos(p.h, p.v)}</td><td class="mono">${fmtCd(p.m)}</td><td class="mono">${fmtCd(p.s)}</td><td class="mono dl ${dcls(p.delta)}">${fmtPct(p.delta)}</td><td class="mono">${lim(p)}</td><td>${pill(p.jm)} <span class="mono" style="color:var(--ink-2)">${margin(p.jm)}</span></td><td>${pill(p.js)} <span class="mono" style="color:var(--ink-2)">${margin(p.js)}</span></td></tr>`).join('')
+      : '<tr><td colspan="8" style="text-align:left;color:var(--ink-2)">No test points defined.</td></tr>') + '</tbody>';
+}
+
+/* ---------- test points editor ---------- */
+function setPoints(list){ st.points = list; $('tpJson').value = '[\n' + list.map(p => ' ' + JSON.stringify(p)).join(',\n') + '\n]'; }
+function applyPointsJson(){
+  try {
+    const arr = JSON.parse($('tpJson').value);
+    if (!Array.isArray(arr)) throw new Error('Expected a list of points.');
+    arr.forEach((p, i) => { if (typeof p.name !== 'string' || !Number.isFinite(p.h) || !Number.isFinite(p.v)) throw new Error(`Point ${i+1} needs a name and numeric h and v.`); });
+    st.points = arr; $('tpErr').classList.remove('err'); $('tpErr').textContent = `${arr.length} points applied.`; $('tpPreset').value = 'custom'; schedule();
+  } catch (e){ $('tpErr').classList.add('err'); $('tpErr').textContent = 'Could not apply: ' + e.message; }
+}
+
+/* ---------- exports ---------- */
+async function saveFile(filename, data){
+  let dl = null;
+  if (dlCap){ try { dl = await dlCap; } catch (e){ dl = null; } }
+  if (dl){
+    try { await dl.save({ filename, data }); toast('Saved ' + filename); }
+    catch (e){ if (e && e.code === 'declined') return; toast(e && e.code === 'rate_limited' ? 'A save is already waiting for confirmation.' : 'Saving is not available in this view.'); }
+    return;
+  }
+  try {
+    const url = URL.createObjectURL(new Blob([data], { type:'application/octet-stream' }));
+    const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  } catch (e){ toast('Saving is not available in this view.'); }
+}
+const stamp = () => new Date().toISOString().slice(0, 10);
+function pointsCSV(){
+  const r = st.res;
+  const head = 'function,point,h_deg,v_deg,measured_cd,simulated_cd,meas_vs_sim_pct,min_cd,max_cd,min_rel_imax,max_rel_imax,measured_status,simulated_status';
+  const fn = FUNCS[st.func].label;
+  const rows = r.pts.map(p => [fn, p.name, p.h, p.v, p.m.toFixed(1), p.s.toFixed(1), Number.isFinite(p.delta) ? (p.delta*100).toFixed(2) : '', p.min ?? '', p.max ?? '', p.minRel ?? '', p.maxRel ?? '', p.jm.st, p.js.st].join(','));
+  const out = [head, ...rows];
+  if (st.cutRes){
+    const { rows: cr } = cutRows();
+    out.push('', 'cut_off_metric,measured,simulated,meas_minus_sim,limit,measured_status,simulated_status');
+    cr.forEach(x => out.push([`"${x[0]}"`, x[1], x[2], x[3], x[4], x[5] == null ? 'na' : x[5] ? 'pass' : 'fail', x[6] == null ? 'na' : x[6] ? 'pass' : 'fail'].join(',')));
+  }
+  return out.join('\n');
+}
+function gridCSV(){
+  const r = st.res;
+  const lines = ['# beamCorrelate ratio grid, log2(measured / simulated); empty = masked', '# measured: ' + st.meas.name + '; simulated: ' + st.sim.name,
+    '# shift ' + r.dh + ' deg H, ' + r.dv + ' deg V; scale ' + r.k.toFixed(5), 'V\\H,' + r.hs.join(',')];
+  for (let j = r.vs.length - 1; j >= 0; j--) lines.push(r.vs[j] + ',' + Array.from(r.R[j], x => Number.isFinite(x) ? x.toFixed(4) : '').join(','));
+  return lines.join('\n');
+}
+async function reportHTML(){
+  const r = st.res, o = st.opts, c = themeColors(true);
+  const img = async (f, h) => { try { return await Plotly.toImage({ data:f.data, layout:Object.assign({}, f.layout, { paper_bgcolor:'#FFFFFF' }) }, { format:'png', width:1100, height:h || 460 }); } catch (e){ return ''; } };
+  const saveView = st.view;
+  const ratio = await img(figRatio(c)), over = await img(figOverlay(c), 520), isoM = await img(figIso(c, 'M')), isoS = await img(figIso(c, 'S'));
+  const sl = figSlices(c); const sH = await img(sl.fH, 380), sV = await img(sl.fV, 380);
+  st.view = saveView;
+  const esc = s => String(s).replace(/[&<>]/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[ch]));
+  const rmsPct = Math.pow(2, r.rms) - 1, biasPct = Math.pow(2, r.mean) - 1;
+  const im = (src, cap) => src ? `<figure><img src="${src}" alt="${cap}"><figcaption>${cap}</figcaption></figure>` : '';
+  let cutHTML = '';
+  if (st.cutRes){
+    const cT = await img(figCutTrace(c), 420), cG = await img(figCutG(c), 380);
+    const { rows } = cutRows(); const pp = x => x == null ? '–' : `<span class="${x ? 'pass' : 'fail'}">${x ? 'pass' : 'fail'}</span>`;
+    cutHTML = `<h2>Cut-off</h2><p class="sub" style="margin:0 0 8px">Simulation ${st.cut.simAligned ? 'after alignment offset' : 'in its own coordinates (aim offset included)'}. G = log₁₀ I(β) − log₁₀ I(β+0.1°), scans in 0.05° steps.</p>
+<table><thead><tr><th>Metric</th><th>Measured</th><th>Simulated</th><th>Meas − sim</th><th>Limit</th><th>Measured</th><th>Simulated</th></tr></thead><tbody>${rows.map(x => `<tr><td>${x[0]}</td><td>${x[1]}</td><td>${x[2]}</td><td>${x[3]}</td><td>${x[4]}</td><td>${pp(x[5])}</td><td>${pp(x[6])}</td></tr>`).join('')}</tbody></table>
+${im(cT, 'Cut-off line trace; dotted lines are the scan positions, diamonds the elbow estimate')}${im(cG, 'Gradient profile at the G check position')}`;
+  }
+  const kv = [['Lamp function', esc(FUNCS[st.func].label)], ['Measured file', esc(st.meas.name) + ' (' + st.meas.format + (st.meas.typeLabel ? ', ' + esc(st.meas.typeLabel) : '') + (o.mirM ? ', mirrored' : '') + ')'],
+    ['Simulated file', esc(st.sim.name) + ' (' + st.sim.format + (st.sim.typeLabel ? ', ' + esc(st.sim.typeLabel) : '') + (o.mirS ? ', mirrored' : '') + ')'],
+    ['Comparison window', `H ${r.win.hmin}° to ${r.win.hmax}°, V ${r.win.vmin}° to ${r.win.vmax}°, step ${r.step}°`],
+    ['Alignment', `${({fit:'Best fit',imax:'Hot-spot centroid',manual:'Manual',none:'None'})[o.alignMode]}: simulation shifted ${fmtShift(r.dh, r.dv)}`],
+    ['Scaling', `${({flux:'Match flux in window',imax:'Match Imax',manual:'Manual',none:'None'})[o.scaleMode]}: k = ${r.k.toFixed(4)}`],
+    ['Imax', `measured ${fmtCd(r.Mmax)} cd at ${fmtPos(...r.MmaxAt)}; simulated ${fmtCd(r.Smax)} cd at ${fmtPos(...r.SmaxAt)}`],
+    ['Flux in window', `measured ${r.phiM.toFixed(1)} lm; raw simulation ${r.phiS0.toFixed(1)} lm (${fmtPct(r.phiM/r.phiS0 - 1)})`],
+    ['RMS deviation', `±${(rmsPct*100).toFixed(1)}%, mean bias ${fmtPct(biasPct)} over ${r.n} cells above ${o.maskPct}% Imax`],
+    [`Cells within ±${o.tolPct}%`, (r.inTol*100).toFixed(1) + '%'], ['Correlation r (log₁₀)', Number.isFinite(r.r) ? r.r.toFixed(4) : '–']];
+  const ptRows = r.pts.map(p => `<tr><td>${esc(p.name)}</td><td>${fmtPos(p.h, p.v)}</td><td>${fmtCd(p.m)}</td><td>${fmtCd(p.s)}</td><td>${fmtPct(p.delta)}</td><td>${limText(p)}</td><td class="${p.jm.st}">${p.jm.st}</td><td class="${p.js.st}">${p.js.st}</td></tr>`).join('');
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Correlation report: ${esc(st.sim.name)} vs ${esc(st.meas.name)}</title>
+<style>body{font-family:"IBM Plex Sans",system-ui,sans-serif;color:#1B2025;max-width:1100px;margin:32px auto;padding:0 20px;font-size:14px;line-height:1.5}h1{font-size:24px;margin:0 0 4px}h2{font-size:16px;margin:28px 0 8px;border-bottom:1px solid #D6DBDD;padding-bottom:4px}.sub{color:#56616B;margin:0 0 18px}table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}td,th{border-bottom:1px solid #E3E6E8;padding:6px 8px;text-align:left;vertical-align:top}th{background:#F2F4F3;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:#56616B}.kv td:first-child{width:220px;color:#56616B}.pass{color:#22774A;font-weight:600}.fail{color:#B42318;font-weight:600}figure{margin:16px 0}img{max-width:100%;border:1px solid #E3E6E8}figcaption{font-size:12px;color:#56616B}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media print{h2{break-after:avoid}figure{break-inside:avoid}}</style></head><body>
+<h1>Simulation vs measurement correlation</h1><p class="sub">${esc(st.sim.name)} vs ${esc(st.meas.name)} · generated ${stamp()} with beamCorrelate</p>
+<h2>Summary</h2><table class="kv">${kv.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}</table>
+<h2>Test points</h2><table><thead><tr><th>Point</th><th>Position</th><th>Measured cd</th><th>Simulated cd</th><th>Meas vs sim</th><th>Limit</th><th>Measured</th><th>Simulated</th></tr></thead><tbody>${ptRows || '<tr><td colspan="8">No test points defined.</td></tr>'}</tbody></table>
+${cutHTML}
+<h2>Ratio map</h2>${im(ratio, 'Measured ÷ simulated on a log₂ scale. Orange: measurement brighter, blue: darker.')}
+<h2>Isocandela overlay</h2>${im(over, 'Measured solid, simulated dashed.')}
+<h2>Isocandela plots</h2>${im(isoM, 'Measured')}${im(isoS, 'Simulated, aligned and scaled')}
+<h2>Scans</h2>${im(sH, 'Horizontal scan')}${im(sV, 'Vertical scan; dotted lines mark the steepest gradient')}
+<p class="sub" style="margin-top:24px">H positive to the right, V positive upward. Preset regulation limits should be checked against the applicable regulation revision.</p></body></html>`;
+}
+
+/* ---------- wiring ---------- */
+$('fileMeas').addEventListener('change', e => { const f = e.target.files[0]; if (f) loadFile('meas', f); e.target.value = ''; });
+$('fileSim').addEventListener('change', e => { const f = e.target.files[0]; if (f) loadFile('sim', f); e.target.value = ''; });
+$('csvHMeas').addEventListener('change', () => reparse('meas'));
+$('csvHSim').addEventListener('change', () => reparse('sim'));
+$('btnDemo').addEventListener('click', loadDemo);
+$('btnSwap').addEventListener('click', () => {
+  if (!st.meas && !st.sim) return;
+  [st.meas, st.sim] = [st.sim, st.meas]; [st.raw.meas, st.raw.sim] = [st.raw.sim, st.raw.meas];
+  const a = $('mirMeas').checked; $('mirMeas').checked = $('mirSim').checked; $('mirSim').checked = a;
+  const b = $('csvHMeas').checked; $('csvHMeas').checked = $('csvHSim').checked; $('csvHSim').checked = b;
+  ['meas', 'sim'].forEach(w => { const el = $(w === 'meas' ? 'infoMeas' : 'infoSim'); el.classList.remove('err'); el.textContent = st[w] ? describe(st[w]) : '–'; el.style.whiteSpace = 'pre-line'; });
+  st.fitCache = null; schedule();
+});
+['hmin','hmax','vmin','vmax','step','mirMeas','mirSim','alignMode','dh','dv','fitRange','scaleMode','k','maskPct','tolPct'].forEach(id => $(id).addEventListener('change', schedule));
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => { st.view = t.dataset.view; renderView(); }));
+$('tpPreset').addEventListener('change', () => { const key = $('tpPreset').value === 'func' ? FUNCS[st.func].pts : 'custom'; setPoints((BC.PRESETS[key] || []).map(p => Object.assign({}, p))); schedule(); });
+$('func').addEventListener('change', () => applyFunction($('func').value, true));
+$('tpApply').addEventListener('click', applyPointsJson);
+$('exPts').addEventListener('click', () => { if (st.res) saveFile(`test_points_${stamp()}.csv`, pointsCSV()); });
+$('exGrid').addEventListener('click', () => { if (st.res) saveFile(`ratio_grid_${stamp()}.csv`, gridCSV()); });
+$('exReport').addEventListener('click', async () => {
+  if (!st.res) return; const b = $('exReport'); b.disabled = true; b.textContent = 'Building report…';
+  try { const html = await reportHTML(); await saveFile(`correlation_report_${stamp()}.html`, html); }
+  finally { b.disabled = false; b.textContent = 'Download report'; }
+});
+const rerenderTheme = () => { if (st.res) renderView(); };
+try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', rerenderTheme); } catch (e) {}
+new MutationObserver(rerenderTheme).observe(document.documentElement, { attributes:true, attributeFilter:['data-theme'] });
+
+applyFunction('lb_rht', false);
+loadDemo();
+})();
+</script>
+</body>
+</html>
