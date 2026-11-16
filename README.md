@@ -1,8 +1,10 @@
-# beamCorrelate
+<img src="assets/logo.svg" width="56" alt="" align="left">
+
+# Beam Correlate
 
 Simulation vs. goniometer measurement correlation for automotive lamps.
 
-beamCorrelate puts a simulated and a measured luminous intensity distribution on one H-V grid, lines them up, and shows where and by how much they differ. It runs entirely in the browser: files are read locally and never uploaded.
+Beam Correlate puts a simulated and a measured luminous intensity distribution on one H-V grid, lines them up, and shows where and by how much they differ. It runs entirely in the browser: files are read locally and never uploaded.
 
 ## Features
 

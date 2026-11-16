@@ -3,146 +3,228 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<style>html{color-scheme:light}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
-<title>beamCorrelate</title>
+<style>html{color-scheme:light}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}</style>
+<title>Beam Correlate</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"%3E%3Cdefs%3E%3CclipPath id="bcA"%3E%3Cpath d="M2 25.5 H19.5 L27.5 19 H46 V46 H2 Z"/%3E%3C/clipPath%3E%3CclipPath id="bcB"%3E%3Cpath d="M2 22 H23.5 L31.5 15.5 H46 V46 H2 Z"/%3E%3C/clipPath%3E%3C/defs%3E%3Crect x="1.5" y="1.5" width="45" height="45" rx="9" fill="#0d151d"/%3E%3Cg clip-path="url%28#bcA%29"%3E%3Cellipse cx="21.5" cy="29.5" rx="19" ry="9.5" fill="#1c5c8c"/%3E%3Cellipse cx="22.5" cy="29" rx="13" ry="6.6" fill="#179498"/%3E%3Cellipse cx="23.5" cy="28.5" rx="8.4" ry="4.4" fill="#d6d046"/%3E%3Cellipse cx="24" cy="28.1" rx="4.3" ry="2.5" fill="#e24e3a"/%3E%3C/g%3E%3Cg clip-path="url%28#bcB%29" fill="none" stroke="#9fd3ff" stroke-width="1.6"%3E%3Cellipse cx="25.5" cy="25.5" rx="19" ry="9.5"/%3E%3Cellipse cx="27.5" cy="24.6" rx="8.4" ry="4.4"/%3E%3C/g%3E%3Cpath d="M4.5 25.5 H19.5 L27.5 19 H43.5" fill="none" stroke="#ffffff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/%3E%3Cpath d="M4.5 22 H23.5 L31.5 15.5 H43.5" fill="none" stroke="#9fd3ff" stroke-width="1.8" stroke-dasharray="3 2" stroke-linejoin="round"/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@600;700&family=Source+Sans+3:wght@400;600&display=swap">
 <style>
-/* Layout: instrument console. Control rail on the left, measurement canvas on the right; stacks to one column on phones. */
+/* Bench layout (shared with Beam Synth): a sticky control rail with export pinned to its foot; results on the right read
+   top-down as verdict and figures, analysis views on dark photometric panels, then tables. */
 :root{
-  --bg:#F2F4F3; --panel:#FFFFFF; --sunk:#E9ECEB; --ink:#1B2025; --ink-2:#56616B; --line:#D6DBDD;
-  --meas:#B4530B; --sim:#3B57C4; --good:#22774A; --bad:#B42318; --warn:#9A5B00;
-  --good-bg:#E3F2E8; --bad-bg:#FBE7E5; --warn-bg:#FBF0DA;
-  --div-mid:#F4F2EC; --div-neg:#2F5FB0; --div-pos:#C2410C;
-  --gam-0:#E4F1EA; --gam-1:#3D8F63; --gam-2:#E9A23B; --gam-3:#B42318;
-  --f-display:"IBM Plex Sans Condensed","Arial Narrow",system-ui,sans-serif;
-  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
-  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
-  --r:8px;
+  --bg:#f3f5f6; --surface:#ffffff; --sunk:#e9edf0; --ink:#15212b; --muted:#55656f; --line:#d5dce1; --line-soft:#e6ebee;
+  --accent:#9a5600; --accent-ink:#ffffff; --accent-soft:#f7e9d3;
+  --pass:#1f7a45; --fail:#c0332a; --warn:#8a5d00; --info:#6b7b88;
+  --meas:#c2410c; --sim:#2563eb;
+  --plot-bg:#0d151d; --plot-ink:#c7d4de; --plot-dim:#8494a1;
+  --f-display:"Saira Semi Condensed","Arial Narrow",sans-serif;
+  --f-body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --f-mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  /* aliases used by generated markup */
+  --ink-2:var(--muted); --panel:var(--surface); --good:var(--pass); --bad:var(--fail);
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#121518; --panel:#1A1E22; --sunk:#22272C; --ink:#E5E8EA; --ink-2:#9AA5AF; --line:#2E353B;
-  --meas:#EE9640; --sim:#8FA3F5; --good:#5CC48A; --bad:#F2766B; --warn:#E2B04A;
-  --good-bg:#18301F; --bad-bg:#3A1C1A; --warn-bg:#3A2D12;
-  --div-mid:#24282D; --div-neg:#6F9BEA; --div-pos:#F08A4B;
-  --gam-0:#1D2B24; --gam-1:#4FAE7C; --gam-2:#D9A441; --gam-3:#F2766B; color-scheme:dark}}
+  --bg:#0b1117; --surface:#121b23; --sunk:#0c141b; --ink:#e3e9ee; --muted:#93a3af; --line:#25343f; --line-soft:#1b2832;
+  --accent:#f0a43a; --accent-ink:#1b1206; --accent-soft:#33260f;
+  --pass:#4cc27a; --fail:#ff6b5d; --warn:#e2b04a; --info:#8c9daa;
+  --meas:#ff9a5a; --sim:#7cc4ff; color-scheme:dark;}}
 :root[data-theme="dark"]{
-  --bg:#121518; --panel:#1A1E22; --sunk:#22272C; --ink:#E5E8EA; --ink-2:#9AA5AF; --line:#2E353B;
-  --meas:#EE9640; --sim:#8FA3F5; --good:#5CC48A; --bad:#F2766B; --warn:#E2B04A;
-  --good-bg:#18301F; --bad-bg:#3A1C1A; --warn-bg:#3A2D12;
-  --div-mid:#24282D; --div-neg:#6F9BEA; --div-pos:#F08A4B;
-  --gam-0:#1D2B24; --gam-1:#4FAE7C; --gam-2:#D9A441; --gam-3:#F2766B; color-scheme:dark}
+  --bg:#0b1117; --surface:#121b23; --sunk:#0c141b; --ink:#e3e9ee; --muted:#93a3af; --line:#25343f; --line-soft:#1b2832;
+  --accent:#f0a43a; --accent-ink:#1b1206; --accent-soft:#33260f;
+  --pass:#4cc27a; --fail:#ff6b5d; --warn:#e2b04a; --info:#8c9daa;
+  --meas:#ff9a5a; --sim:#7cc4ff; color-scheme:dark;}
 *{box-sizing:border-box}
-body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.5}
-.wrap{max-width:1500px;margin:0 auto;padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;padding-bottom:16px;border-bottom:1px solid var(--line);margin-bottom:18px}
-h1{font-family:var(--f-display);font-weight:600;font-size:28px;letter-spacing:-.01em;margin:0;line-height:1.1}
-h1 .b{color:var(--meas)} h1 .c{color:var(--sim)}
-.sub{color:var(--ink-2);margin:4px 0 0;font-size:14px}
-.chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:4px 10px;border-radius:999px;background:var(--sunk);color:var(--ink-2);border:1px solid var(--line)}
-.chip svg{width:13px;height:13px}
-.app{display:grid;grid-template-columns:330px minmax(0,1fr);gap:18px;align-items:start}
-@media (max-width:960px){.app{grid-template-columns:minmax(0,1fr)}}
-.rail{display:flex;flex-direction:column;gap:12px}
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px}
-.panel h2{font-family:var(--f-display);font-weight:600;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);margin:0 0 10px}
-.ds{display:flex;flex-direction:column;gap:8px}
-.ds + .ds{margin-top:14px;padding-top:14px;border-top:1px dashed var(--line)}
-.ds-head{display:flex;align-items:center;gap:8px;font-weight:600}
-.swatch{width:18px;height:3px;border-radius:2px;flex:none}
-.sw-meas{background:var(--meas)} .sw-sim{background:var(--sim);background:repeating-linear-gradient(90deg,var(--sim) 0 5px,transparent 5px 8px)}
-.ds-info{font-family:var(--f-mono);font-size:12px;color:var(--ink-2);word-break:break-word;min-height:1.4em}
-.ds-info.err{color:var(--bad)}
-.file{position:relative;display:flex}
-.file input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
-.file span{flex:1;text-align:center;padding:7px 10px;border:1px dashed var(--line);border-radius:var(--r);color:var(--ink-2);font-size:13px;background:var(--sunk)}
-.file input:focus-visible + span,.file:hover span{border-color:var(--ink-2);color:var(--ink)}
-.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-label.f{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--ink-2);min-width:0}
-input[type=number],select,textarea{font:inherit;font-family:var(--f-mono);font-size:13px;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 8px;width:100%;min-width:0}
-textarea{min-height:170px;resize:vertical;font-size:12px;line-height:1.45}
-input:disabled{color:var(--ink-2);background:var(--sunk)}
-input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px solid var(--sim);outline-offset:1px}
-label.ck{display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer}
-button{font:inherit;font-size:13px;font-weight:500;color:var(--ink);background:var(--sunk);border:1px solid var(--line);border-radius:6px;padding:7px 12px;cursor:pointer}
-button:hover{border-color:var(--ink-2)}
-button.primary{background:var(--ink);color:var(--panel);border-color:var(--ink)}
-button:disabled{opacity:.55;cursor:default}
-.hint{font-size:12px;color:var(--ink-2);margin:6px 0 0}
-.hint.err{color:var(--bad)}
-.main{display:flex;flex-direction:column;gap:14px;min-width:0}
-.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
-.kpi{background:var(--panel);padding:10px 12px;min-width:0;box-shadow:1px 0 0 var(--line),0 1px 0 var(--line)}
-.kpi .k .nc{text-transform:none}
-.kpi .k{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
-.kpi .v{font-family:var(--f-mono);font-size:18px;font-weight:500;font-variant-numeric:tabular-nums;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.kpi .d{font-size:12px;color:var(--ink-2);font-variant-numeric:tabular-nums}
-.v.good{color:var(--good)} .v.bad{color:var(--bad)} .v.warn{color:var(--warn)}
-.tabs{display:flex;flex-wrap:wrap;gap:4px;border-bottom:1px solid var(--line)}
-.tab{background:none;border:none;border-bottom:2px solid transparent;border-radius:0;padding:8px 12px;color:var(--ink-2)}
-.tab[aria-selected=true]{color:var(--ink);border-bottom-color:var(--ink)}
-.viewbar{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;padding:10px 0 0}
-.viewbar label.f{flex-direction:row;align-items:center;gap:6px}
-.viewbar input[type=number]{width:80px}
-.viewbar select{width:auto}
-.plots{display:grid;gap:12px}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;font-variant-numeric:tabular-nums;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 40px}
+.wrap{max-width:1500px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.bench{display:grid;grid-template-columns:372px minmax(0,1fr);gap:20px;align-items:start}
+
+/* ---- control rail ---- */
+aside{background:var(--surface);border:1px solid var(--line);border-radius:10px;min-width:0;display:flex;flex-direction:column;
+  position:sticky;top:max(12px,env(safe-area-inset-top,0px));max-height:calc(100vh - 24px);overflow:hidden}
+aside header{padding:12px 14px;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px}
+.logo{width:34px;height:34px;flex:none}
+h1{font-family:var(--f-display);font-weight:700;font-size:22px;letter-spacing:.01em;margin:0;line-height:1}
+.tag{font-size:13px;color:var(--muted);margin:3px 0 0;line-height:1.2}
+.rail-body{position:relative;overflow-y:auto;overscroll-behavior:contain;padding:14px 14px 4px;display:flex;flex-direction:column;gap:14px;min-height:0}
+.rail-foot{border-top:1px solid var(--line);padding:12px 14px;display:flex;flex-direction:column;gap:8px;background:var(--surface)}
+fieldset{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;min-width:0}
+legend{padding:0;font-weight:600;font-size:14.5px;margin-bottom:2px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:13.5px;color:var(--muted);min-width:0}
+input,select,textarea{font:15px var(--f-body);font-variant-numeric:tabular-nums;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:5px;padding:7px 9px;width:100%;min-width:0}
+input:hover,select:hover,textarea:hover{border-color:var(--muted)}
+input::placeholder,textarea::placeholder{color:var(--muted);opacity:.8}
+textarea{font:12px/1.5 var(--f-mono);resize:vertical;white-space:pre;overflow:auto;background:var(--sunk);min-height:170px}
+input:disabled{opacity:.55}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+input[type=checkbox]{width:17px;height:17px;accent-color:var(--accent);flex:none;padding:0}
+.btnrow{display:flex;flex-wrap:wrap;gap:6px}
+.btn{font:600 14px var(--f-body);border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:5px;padding:7px 12px;cursor:pointer}
+.btn:hover{border-color:var(--muted)}
+.btnrow .btn{flex:1}
+.note{font-size:13px;line-height:1.45;color:var(--muted);margin:0;max-width:68ch}
+.note.err{color:var(--fail)}
+.chk{display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer}
+.ds{display:flex;flex-direction:column;gap:6px}
+.ds-h{display:flex;align-items:center;gap:8px;font-weight:600;font-size:14.5px}
+.sw{width:20px;height:0;border-top:3px solid var(--meas);flex:none}
+.sw.sim{border-top:3px dashed var(--sim)}
+.drop{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;border:1.5px dashed var(--line);border-radius:7px;padding:10px;cursor:pointer;background:var(--sunk);text-align:center}
+.drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.drop:focus-within{outline:2px solid var(--accent);outline-offset:1px}
+.drop input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.drop-t{font-weight:600;font-size:14px;color:var(--ink)}
+.drop-s{font-size:12.5px;color:var(--muted);overflow-wrap:anywhere;line-height:1.35}
+.drop-s.err{color:var(--fail);font-weight:600}
+.opts{display:flex;flex-wrap:wrap;gap:4px 16px}
+/* collapsible setting groups: the header carries the current values, so a closed group still tells you its state */
+.secs{display:flex;flex-direction:column;border-top:1px solid var(--line-soft)}
+details.sec{border-bottom:1px solid var(--line-soft)}
+details.sec>summary{list-style:none;display:flex;align-items:baseline;gap:10px;padding:10px 2px 10px 18px;cursor:pointer;position:relative;user-select:none}
+details.sec>summary::-webkit-details-marker{display:none}
+details.sec>summary::before{content:"";position:absolute;left:3px;top:50%;width:6px;height:6px;border-right:1.5px solid var(--muted);border-bottom:1.5px solid var(--muted);transform:translateY(-70%) rotate(-45deg);transition:transform .15s}
+details.sec[open]>summary::before{transform:translateY(-85%) rotate(45deg)}
+details.sec>summary:hover .st{color:var(--accent)}
+.st{font-weight:600;font-size:14.5px;color:var(--ink);flex:none}
+.sv{font-size:13px;color:var(--muted);margin-left:auto;text-align:right;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+details.sec[open] .sv{visibility:hidden}
+.sb{display:flex;flex-direction:column;gap:10px;padding:2px 0 14px}
+.go{font:700 17px var(--f-display);letter-spacing:.02em;background:var(--accent);color:var(--accent-ink);border:0;border-radius:7px;padding:11px;cursor:pointer;width:100%}
+.go:hover{filter:brightness(1.08)}
+.go:disabled{opacity:.6;cursor:progress;filter:none}
+.msg{font-size:13.5px;color:var(--muted);margin:0}
+.msg:empty{display:none}
+.busy{color:var(--warn)}
+.lock{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);margin:0}
+.lock svg{width:13px;height:13px;flex:none}
+
+/* ---- results ---- */
+main{display:flex;flex-direction:column;gap:20px;min-width:0}
+.summary{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.kv{grid-column:span 2;padding:11px 14px 12px;min-width:0;border-right:1px solid var(--line-soft);border-top:1px solid var(--line-soft);margin:-1px -1px 0 0}
+.kv b{display:block;font:400 13px var(--f-body);color:var(--muted)}
+.kv b .nc{text-transform:none}
+.kv span.v{display:block;font:600 21px/1.25 var(--f-display);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kv em{display:block;font-style:normal;font-size:12.5px;color:var(--muted);line-height:1.35;margin-top:1px}
+/* a good figure is quiet, a doubtful one is amber, a bad one is red */
+.kv.warn span.v{color:var(--warn)} .kv.bad span.v{color:var(--fail)}
+.kv.verdict{grid-column:span 4;padding:14px 16px 14px 20px;position:relative;border-bottom:1px solid var(--line)}
+.kv.verdict::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--info)}
+.kv.verdict.good::before{background:var(--pass)} .kv.verdict.warn::before{background:var(--warn)} .kv.verdict.bad::before{background:var(--fail)}
+.kv.verdict span.v{font-size:27px;line-height:1.15}
+.kv.verdict.good span.v{color:var(--pass)}
+.kv.status{grid-column:1/-1;border-bottom:0}
+.screen{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden;min-width:0}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:10px 14px;border-bottom:1px solid var(--line)}
+.bar h2{font:600 18px var(--f-display);margin:0 auto 0 0;letter-spacing:.01em}
+.tabs{display:flex;gap:3px;background:var(--sunk);border-radius:7px;padding:3px;overflow-x:auto;max-width:100%;scrollbar-width:none}
+.tab{font:600 14px var(--f-body);border:0;border-radius:5px;padding:7px 12px;background:transparent;color:var(--muted);cursor:pointer;white-space:nowrap}
+.tab:hover{color:var(--ink)}
+.tab[aria-selected=true]{background:var(--surface);color:var(--ink);box-shadow:0 0 0 1px var(--line)}
+.viewbar{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;padding:9px 14px;border-bottom:1px solid var(--line)}
+.viewbar:empty{display:none}
+.viewbar label.f{flex-direction:row;align-items:center;gap:6px;font-size:13.5px}
+.viewbar input[type=number]{width:84px;padding:4px 6px;font-size:14px}
+.viewbar input[type=text]{width:160px;padding:4px 6px;font-size:14px}
+.viewbar select{width:auto;padding:4px 6px;font-size:14px}
+.viewbar .ck{display:flex;align-items:center;gap:6px;font-size:13.5px;color:var(--muted);cursor:pointer}
+.viewbar .hint{font-size:13px;color:var(--muted)}
+.cv{background:var(--plot-bg)}
+.plots{display:grid;gap:1px;background:rgba(199,212,222,.08)}
 .plots.two{grid-template-columns:1fr 1fr}
-@media (max-width:1200px){.plots.two{grid-template-columns:minmax(0,1fr)}}
-.plotbox{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);min-width:0;position:relative}
-.plotbox .pt{position:absolute;left:12px;top:8px;font-size:12px;font-weight:600;color:var(--ink-2);z-index:2;pointer-events:none}
+@media (max-width:1250px){.plots.two{grid-template-columns:minmax(0,1fr)}.plots.two>.plotbox{grid-column:auto!important}}
+.plotbox{background:var(--plot-bg);min-width:0;position:relative}
 .plot{width:100%;height:440px}
-@media (max-width:640px){.plot{height:340px}}
-.legend-note{font-size:12px;color:var(--ink-2);padding:0 2px}
-.tablewrap{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
-table{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums}
-th,td{padding:7px 10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
-th{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-2);font-weight:600;background:var(--sunk)}
-th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left}
-tbody tr:last-child td{border-bottom:none}
-td.mono{font-family:var(--f-mono)}
-.pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px}
-.pill.pass{background:var(--good-bg);color:var(--good)} .pill.fail{background:var(--bad-bg);color:var(--bad)} .pill.na{color:var(--ink-2)}
-.dl.good{color:var(--good)} .dl.warn{color:var(--warn)} .dl.bad{color:var(--bad)}
-.sec-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
-.sec-head h3{font-family:var(--f-display);font-weight:600;font-size:17px;margin:0}
-details summary{cursor:pointer;font-size:13px;color:var(--ink-2)}
-.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:8px 14px;border-radius:6px;font-size:13px;z-index:50;max-width:calc(100% - 32px)}
-.busy{font-size:12px;color:var(--warn)}
-footer{margin-top:26px;padding-top:14px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-2);display:grid;gap:6px}
-footer p{margin:0;max-width:110ch}
-.code{font-family:var(--f-mono);font-size:12px}
-#viewExtra{display:flex;flex-direction:column;gap:10px}
-#viewExtra .busyline{font-size:13px;color:var(--warn)}
-#viewExtra .interp{font-size:13px;color:var(--ink-2);max-width:110ch;margin:0}
-#viewExtra .interp strong{color:var(--ink)}
-.det{font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px;white-space:nowrap}
-.det.good{background:var(--good-bg);color:var(--good)} .det.warn{background:var(--warn-bg);color:var(--warn)} .det.bad{background:var(--sunk);color:var(--ink-2)}
-td.lft,th.lft{text-align:left}
+.plots:empty{min-height:0}
+.foot{display:flex;flex-wrap:wrap;gap:6px 16px;justify-content:space-between;align-items:center;padding:8px 14px;background:var(--plot-bg);color:var(--plot-ink);border-top:1px solid rgba(255,255,255,.07)}
+.readout{font-size:13.5px;min-height:1.4em;max-width:120ch}
+.legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12.5px;color:var(--plot-dim)}
+.legend i{display:inline-block;width:16px;height:0;border-top:2.5px solid;margin-right:5px;vertical-align:3px}
+#viewExtra{display:flex;flex-direction:column;gap:14px}
 #viewExtra:empty{display:none}
-#viewExtra .warnline{font-size:12px;color:var(--warn);background:var(--warn-bg);border-radius:6px;padding:6px 10px;margin:0 0 8px}
-.viewbar input[type=text]{font-family:var(--f-mono);font-size:13px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);min-width:0}
-@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+#viewExtra .interp{font-size:13.5px;color:var(--muted);max-width:120ch;margin:-4px 2px 0}
+#viewExtra .interp strong{color:var(--ink);font-weight:600}
+#viewExtra .busyline{font-size:14px;color:var(--warn);margin:0;padding:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.warnline{font-size:13.5px;color:var(--warn);margin:0;padding:9px 14px;border-bottom:1px solid var(--line)}
+details.fold>summary{list-style:none;cursor:pointer;user-select:none}
+details.fold>summary::-webkit-details-marker{display:none}
+details.fold>summary h2{margin:0}
+details.fold>summary .note{margin-left:auto;text-align:right}
+details.fold:not([open])>summary{border-bottom:0}
+details.fold>summary:hover h2{color:var(--accent)}
+.chev{width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg) translate(-2px,-2px);transition:transform .15s;flex:none}
+details.fold:not([open]) .chev{transform:rotate(-45deg)}
+.cnt{font:600 13px var(--f-body);padding:2px 9px;border-radius:99px;background:var(--sunk);color:var(--muted)}
+.cnt:empty{display:none}
+.cnt.p{background:color-mix(in srgb,var(--pass) 14%,transparent);color:var(--pass)}
+.cnt.f{background:var(--fail);color:#fff}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th{font:600 13px var(--f-body);color:var(--muted);text-align:right;padding:8px 14px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:6px 14px;border-bottom:1px solid var(--line-soft);white-space:nowrap;text-align:right}
+th:first-child,td:first-child,td.lft,th.lft{text-align:left}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover td{background:color-mix(in srgb,var(--sunk) 55%,transparent)}
+td.mono{font-variant-numeric:tabular-nums}
+td strong{font-weight:600}
+.dl.warn{color:var(--warn)} .dl.bad{color:var(--fail);font-weight:600}
+/* status: a pass is quiet, a fail is loud */
+.pill{display:inline-block;font:600 13px var(--f-body);border-radius:4px}
+.pill.pass{color:var(--pass)}
+.pill.fail{background:var(--fail);color:#fff;padding:1px 8px}
+.pill.na{color:var(--info);font-weight:400}
+.det{font:600 12.5px var(--f-body);white-space:nowrap}
+.det.good{color:var(--pass)} .det.warn{color:var(--warn)} .det.bad{color:var(--muted);font-weight:400}
+details.method .mb{padding:4px 14px 14px;display:grid;gap:10px}
+details.method .mb p{margin:0;font-size:13.5px;color:var(--muted);max-width:120ch}
+details.method .mb strong{color:var(--ink);font-weight:600}
+footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);padding-top:10px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--surface);padding:8px 14px;border-radius:6px;font-size:13.5px;z-index:50;max-width:calc(100% - 32px)}
+
+@media (max-width:1180px){
+  .summary{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .kv{grid-column:span 1}.kv.verdict{grid-column:span 2}
+}
+@media (max-width:900px){
+  .bench{grid-template-columns:minmax(0,1fr)}
+  aside{position:static;max-height:none;overflow:visible}
+  .rail-body{overflow:visible}
+  .rail-foot{position:sticky;bottom:0;border-radius:0 0 10px 10px;z-index:2;padding-bottom:max(12px,env(safe-area-inset-bottom,0px))}
+}
+@media (max-width:640px){
+  body{font-size:16px}
+  input,select,textarea,.viewbar select,.viewbar input[type=number],.viewbar input[type=text]{font-size:16px}
+  textarea{font-size:12px}
+  .summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .kv.verdict{grid-column:span 2}
+  .kv span.v{font-size:19px}.kv.verdict span.v{font-size:24px}
+  .plot{height:340px}
+  details.fold>summary .note{margin-left:0;text-align:left;flex-basis:100%}
+  td,th{padding-inline:10px}
+}
+@media (prefers-reduced-motion:reduce){.chev,details.sec>summary::before{transition:none}}
 </style>
 </head>
 <body>
 
 <div class="wrap">
-  <header class="top">
-    <div>
-      <h1>beam<span class="b">Corr</span><span class="c">elate</span></h1>
-      <p class="sub">Simulation vs. goniometer measurement correlation for automotive lamps</p>
+<div class="bench">
+<aside aria-label="Correlation settings">
+  <header>
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 48 48" aria-hidden="true"><defs><clipPath id="bcA"><path d="M2 25.5 H19.5 L27.5 19 H46 V46 H2 Z"/></clipPath><clipPath id="bcB"><path d="M2 22 H23.5 L31.5 15.5 H46 V46 H2 Z"/></clipPath></defs><rect x="1.5" y="1.5" width="45" height="45" rx="9" fill="#0d151d"/><g clip-path="url(#bcA)"><ellipse cx="21.5" cy="29.5" rx="19" ry="9.5" fill="#1c5c8c"/><ellipse cx="22.5" cy="29" rx="13" ry="6.6" fill="#179498"/><ellipse cx="23.5" cy="28.5" rx="8.4" ry="4.4" fill="#d6d046"/><ellipse cx="24" cy="28.1" rx="4.3" ry="2.5" fill="#e24e3a"/></g><g clip-path="url(#bcB)" fill="none" stroke="#9fd3ff" stroke-width="1.6"><ellipse cx="25.5" cy="25.5" rx="19" ry="9.5"/><ellipse cx="27.5" cy="24.6" rx="8.4" ry="4.4"/></g><path d="M4.5 25.5 H19.5 L27.5 19 H43.5" fill="none" stroke="#ffffff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.5 22 H23.5 L31.5 15.5 H43.5" fill="none" stroke="#9fd3ff" stroke-width="1.8" stroke-dasharray="3 2" stroke-linejoin="round"/></svg>
+      <div><h1>Beam Correlate</h1><p class="tag">Simulation vs. goniometer measurement</p></div>
     </div>
-    <span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Files are read on this device and never uploaded</span>
   </header>
-
-  <div class="app">
-    <aside class="rail">
-      <section class="panel" aria-labelledby="h-func">
-        <h2 id="h-func">Lamp function</h2>
-        <select id="func" aria-label="Lamp function">
+  <div class="rail-body">
+    <fieldset>
+      <label class="f">Lamp function
+        <select id="func">
           <optgroup label="Front lighting">
             <option value="lb_rht" selected>Low beam (RHT)</option>
             <option value="lb_lht">Low beam (LHT)</option>
@@ -159,122 +241,136 @@ td.lft,th.lft{text-align:left}
             <option value="rev">Reversing lamp</option>
           </optgroup>
         </select>
-        <p class="hint" id="funcNote"></p>
-      </section>
+      </label>
+      <p class="note" id="funcNote"></p>
+    </fieldset>
 
-      <section class="panel" aria-labelledby="h-data">
-        <h2 id="h-data">Data</h2>
-        <div class="ds">
-          <div class="ds-head"><span class="swatch sw-meas"></span>Measured</div>
-          <label class="file"><input id="fileMeas" type="file" accept=".ies,.IES,.ldt,.LDT,.csv,.CSV,.txt,.TXT"><span>Choose IES, LDT or CSV…</span></label>
-          <div class="ds-info" id="infoMeas">–</div>
-          <div class="row"><label class="ck"><input type="checkbox" id="mirMeas">Mirror left/right</label><label class="ck"><input type="checkbox" id="csvHMeas">CSV rows are H</label></div>
-        </div>
-        <div class="ds">
-          <div class="ds-head"><span class="swatch sw-sim"></span>Simulated</div>
-          <label class="file"><input id="fileSim" type="file" accept=".ies,.IES,.ldt,.LDT,.csv,.CSV,.txt,.TXT"><span>Choose IES, LDT or CSV…</span></label>
-          <div class="ds-info" id="infoSim">–</div>
-          <div class="row"><label class="ck"><input type="checkbox" id="mirSim">Mirror left/right</label><label class="ck"><input type="checkbox" id="csvHSim">CSV rows are H</label></div>
-        </div>
-        <div class="row" style="margin-top:12px"><button id="btnDemo" type="button">Load demo pair</button><button id="btnSwap" type="button">Swap</button></div>
-      </section>
-
-      <section class="panel" aria-labelledby="h-grid">
-        <h2 id="h-grid">Comparison window</h2>
-        <div class="grid2">
-          <label class="f">H min (°)<input id="hmin" type="number" step="0.5" value="-30"></label>
-          <label class="f">H max (°)<input id="hmax" type="number" step="0.5" value="30"></label>
-          <label class="f">V min (°)<input id="vmin" type="number" step="0.5" value="-10"></label>
-          <label class="f">V max (°)<input id="vmax" type="number" step="0.5" value="10"></label>
-        </div>
-        <label class="f" style="margin-top:8px">Grid step
-          <select id="step"><option value="0.05">0.05°</option><option value="0.1" selected>0.1°</option><option value="0.2">0.2°</option><option value="0.25">0.25°</option><option value="0.5">0.5°</option></select>
-        </label>
-      </section>
-
-      <section class="panel" aria-labelledby="h-align">
-        <h2 id="h-align">Align and scale simulation</h2>
-        <label class="f">Alignment
-          <select id="alignMode"><option value="fit" selected>Best fit (log cross-correlation)</option><option value="imax">Match hot-spot centroid</option><option value="manual">Manual offset</option><option value="none">None</option></select>
-        </label>
-        <div class="grid3" style="margin-top:8px">
-          <label class="f">ΔH (°, +R)<input id="dh" type="number" step="0.01" value="0"></label>
-          <label class="f">ΔV (°, +U)<input id="dv" type="number" step="0.01" value="0"></label>
-          <label class="f">Search ±(°)<input id="fitRange" type="number" step="0.5" min="0.5" max="5" value="2"></label>
-        </div>
-        <label class="f" style="margin-top:10px">Scaling
-          <select id="scaleMode"><option value="flux" selected>Match flux in window</option><option value="imax">Match Imax</option><option value="manual">Manual factor</option><option value="none">None (absolute)</option></select>
-        </label>
-        <label class="f" style="margin-top:8px">Factor k applied to simulation<input id="k" type="number" step="0.01" value="1"></label>
-        <p class="hint" id="alignNote"></p>
-      </section>
-
-      <section class="panel" aria-labelledby="h-cmp">
-        <h2 id="h-cmp">Evaluation</h2>
-        <div class="grid2">
-          <label class="f">Mask below (% Imax)<input id="maskPct" type="number" step="0.5" min="0" value="1"></label>
-          <label class="f">Tolerance ± (%)<input id="tolPct" type="number" step="1" min="1" value="15"></label>
-        </div>
-        <p class="hint">Cells darker than the mask are left out of statistics and the ratio map, where small absolute errors give meaningless ratios.</p>
-      </section>
-
-      <section class="panel" aria-labelledby="h-tp">
-        <h2 id="h-tp">Test points</h2>
-        <label class="f">Preset
-          <select id="tpPreset"><option value="func">Defaults for this function</option><option value="custom">Custom</option></select>
-        </label>
-        <details style="margin-top:10px">
-          <summary>Edit points (JSON)</summary>
-          <textarea id="tpJson" spellcheck="false" aria-label="Test points JSON"></textarea>
-          <div class="row" style="margin-top:6px"><button id="tpApply" type="button">Apply points</button></div>
-          <p class="hint" id="tpErr">h: + right / − left, v: + up / − down. Limits are optional: min and max in cd, or minRel and maxRel as a fraction of that dataset's Imax (for example "minRel": 0.8).</p>
-        </details>
-      </section>
-    </aside>
-
-    <main class="main">
-      <div class="kpis" id="kpis" aria-live="polite"></div>
-
-      <div>
-        <div class="tabs" role="tablist" aria-label="Views">
-          <button class="tab" role="tab" data-view="ratio" aria-selected="true">Ratio map</button>
-          <button class="tab" role="tab" data-view="iso" aria-selected="false">Isocandela</button>
-          <button class="tab" role="tab" data-view="overlay" aria-selected="false">Contour overlay</button>
-          <button class="tab" role="tab" data-view="slices" aria-selected="false">Slices</button>
-          <button class="tab" role="tab" data-view="cutoff" aria-selected="false" id="tabCut">Cut-off</button>
-          <button class="tab" role="tab" data-view="gamma" aria-selected="false">Gamma</button>
-          <button class="tab" role="tab" data-view="calib" aria-selected="false">Calibration</button>
-        </div>
-        <div class="viewbar" id="viewbar"></div>
+    <fieldset>
+      <div class="ds">
+        <div class="ds-h"><span class="sw" aria-hidden="true"></span>Measured</div>
+        <label class="drop" id="dropMeas"><input id="fileMeas" type="file" accept=".ies,.IES,.ldt,.LDT,.csv,.CSV,.txt,.TXT"><span class="drop-t">Load goniometer file</span><span class="drop-s" id="infoMeas">IES, LDT or CSV · or drop it here</span></label>
+        <div class="opts"><label class="chk"><input type="checkbox" id="mirMeas">Mirror left/right</label><label class="chk"><input type="checkbox" id="csvHMeas">CSV rows are H</label></div>
       </div>
-      <div id="plots" class="plots"></div>
-      <div class="legend-note" id="plotNote"></div>
-      <div id="viewExtra"></div>
+      <div class="ds">
+        <div class="ds-h"><span class="sw sim" aria-hidden="true"></span>Simulated</div>
+        <label class="drop" id="dropSim"><input id="fileSim" type="file" accept=".ies,.IES,.ldt,.LDT,.csv,.CSV,.txt,.TXT"><span class="drop-t">Load simulation export</span><span class="drop-s" id="infoSim">IES, LDT or CSV · or drop it here</span></label>
+        <div class="opts"><label class="chk"><input type="checkbox" id="mirSim">Mirror left/right</label><label class="chk"><input type="checkbox" id="csvHSim">CSV rows are H</label></div>
+      </div>
+      <div class="btnrow"><button class="btn" id="btnDemo" type="button">Load demo pair</button><button class="btn" id="btnSwap" type="button">Swap datasets</button></div>
+      <p class="lock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Files are read on this device and never uploaded.</p>
+    </fieldset>
 
-      <section>
-        <div class="sec-head" style="margin-bottom:8px">
-          <h3>Test point correlation</h3>
-          <div class="row">
-            <button id="exReport" type="button" class="primary">Download report</button>
-            <button id="exPts" type="button">Points CSV</button>
-            <button id="exGrid" type="button">Ratio grid CSV</button>
+    <div class="secs">
+      <details class="sec">
+        <summary><span class="st">Comparison window</span><span class="sv" id="svWin"></span></summary>
+        <div class="sb">
+          <div class="row2">
+            <label class="f">H min (°)<input id="hmin" type="number" step="0.5" value="-30"></label>
+            <label class="f">H max (°)<input id="hmax" type="number" step="0.5" value="30"></label>
           </div>
+          <div class="row2">
+            <label class="f">V min (°)<input id="vmin" type="number" step="0.5" value="-10"></label>
+            <label class="f">V max (°)<input id="vmax" type="number" step="0.5" value="10"></label>
+          </div>
+          <label class="f">Grid step
+            <select id="step"><option value="0.05">0.05°</option><option value="0.1" selected>0.1°</option><option value="0.2">0.2°</option><option value="0.25">0.25°</option><option value="0.5">0.5°</option></select>
+          </label>
         </div>
-        <div class="tablewrap"><table id="tpTable"></table></div>
-      </section>
-    </main>
+      </details>
+      <details class="sec">
+        <summary><span class="st">Alignment and scaling</span><span class="sv" id="svAlign"></span></summary>
+        <div class="sb">
+          <label class="f">Alignment
+            <select id="alignMode"><option value="fit" selected>Best fit (log cross-correlation)</option><option value="imax">Match hot-spot centroid</option><option value="manual">Manual offset</option><option value="none">None</option></select>
+          </label>
+          <div class="row3">
+            <label class="f">ΔH (°, +R)<input id="dh" type="number" step="0.01" value="0"></label>
+            <label class="f">ΔV (°, +U)<input id="dv" type="number" step="0.01" value="0"></label>
+            <label class="f">Search ±(°)<input id="fitRange" type="number" step="0.5" min="0.5" max="5" value="2"></label>
+          </div>
+          <label class="f">Scaling
+            <select id="scaleMode"><option value="flux" selected>Match flux in window</option><option value="imax">Match Imax</option><option value="manual">Manual factor</option><option value="none">None (absolute)</option></select>
+          </label>
+          <label class="f">Factor k applied to simulation<input id="k" type="number" step="0.01" value="1"></label>
+        </div>
+      </details>
+      <details class="sec">
+        <summary><span class="st">Evaluation</span><span class="sv" id="svEval"></span></summary>
+        <div class="sb">
+          <div class="row2">
+            <label class="f">Mask below (% Imax)<input id="maskPct" type="number" step="0.5" min="0" value="1"></label>
+            <label class="f">Tolerance ± (%)<input id="tolPct" type="number" step="1" min="1" value="15"></label>
+          </div>
+          <p class="note">Cells darker than the mask are left out of statistics and the ratio map, where small absolute errors give meaningless ratios.</p>
+        </div>
+      </details>
+      <details class="sec">
+        <summary><span class="st">Test points</span><span class="sv" id="svTp"></span></summary>
+        <div class="sb">
+          <label class="f">Preset
+            <select id="tpPreset"><option value="func">Defaults for this function</option><option value="custom">Custom</option></select>
+          </label>
+          <textarea id="tpJson" spellcheck="false" aria-label="Test points JSON"></textarea>
+          <div class="btnrow"><button class="btn" id="tpApply" type="button">Apply points</button></div>
+          <p class="note" id="tpErr">h: + right / − left, v: + up / − down. Limits are optional: min and max in cd, or minRel and maxRel as a fraction of that dataset's Imax (for example "minRel": 0.8).</p>
+        </div>
+      </details>
+    </div>
   </div>
+  <div class="rail-foot">
+    <button class="go" id="exReport" type="button">Download report</button>
+    <div class="btnrow"><button class="btn" id="exPts" type="button">Results CSV</button><button class="btn" id="exGrid" type="button">Ratio grid CSV</button></div>
+    <p class="msg" id="alignNote" role="status"></p>
+  </div>
+</aside>
 
-  <footer>
-    <p><strong>Conventions.</strong> H is positive to the right (R), V positive upward (U), seen from behind the lamp. ΔH/ΔV is the shift applied to the simulation so it lines up with the measurement. Type A/B IES files and CSV grids are read as H-V angles directly. Type C (IES/LDT) is converted assuming the optical axis at C0/γ90 with C90 to the right; tick "Mirror left/right" if a beam comes out flipped.</p>
-    <p><strong>CSV.</strong> Matrix layout with H angles across the first row and V angles down the first column (tick "CSV rows are H" if transposed), or three columns H, V, cd. Comma, semicolon or tab separated.</p>
-    <p><strong>Ratio.</strong> Measured / simulated, on a log₂ colour scale so ×2 and ×0.5 look equally far from ×1. RMS deviation and the tolerance band are computed on unmasked cells only.</p>
-    <p><strong>Cut-off.</strong> Vertical scans in 0.05° steps on log-interpolated data. Sharpness G = log₁₀ I(β) − log₁₀ I(β+0.1°), taken at its maximum. The cut-off position β is the centre of the gradient peak (inflection of log I). Linearity is the spread of β across the scan positions. The elbow is where a straight-line fit of the rising shoulder meets the horizontal part, and the shoulder angle comes from that fit. G is only as good as the data resolution near the cut-off.</p>
-    <p><strong>Gamma.</strong> For each measured cell above the threshold, γ = min √(|Δr|²/DTA² + ΔI²/ΔI<sub>tol</sub>²) over nearby simulated positions, searched to 2·DTA (so γ is capped at 2). γ ≤ 1 passes: the simulation matches either in value or within the distance-to-agreement. ΔI<sub>tol</sub> is a share of the local measured value (local) or of measured Imax (global). The plain-ratio pass rate is shown beside it; the gap between them is error that is only a small position shift.</p>
-    <p><strong>Contours.</strong> For each iso level, distances in degrees from every point of one contour to the nearest point of the other, both ways: mean, 95th percentile and maximum (Hausdorff). The signed shift is positive where the simulated line lies outside the measured one. Extents are the furthest cells at or above the level; * marks a window edge.</p>
-    <p><strong>Calibration.</strong> Fits I<sub>cal</sub> = a·(G<sub>σH,σV</sub> ∗ I<sub>sim</sub>)(H−δH, V−δV) + halo + floor, where G is a Gaussian blur, the halo is the simulation blurred by 5° and the floor is uniform. Aim (δ), blur and the linear terms are fitted together because blur moves the apparent centre of an asymmetric beam. Each σ is labelled by how much the fit worsens when it is halved or raised by half: a beam without sharp features in one direction cannot determine σ in that direction.</p>
-    <p>beamCorrelate · © 2026 Jalib Akther</p>
-  </footer>
+<main>
+  <section class="summary" id="kpis" aria-label="Correlation summary" aria-live="polite"></section>
+
+  <section class="screen" aria-label="Analysis views">
+    <div class="bar">
+      <h2 id="viewTitle">Ratio map</h2>
+      <div class="tabs" role="tablist" aria-label="Views">
+        <button class="tab" role="tab" data-view="ratio" aria-selected="true">Ratio</button>
+        <button class="tab" role="tab" data-view="iso" aria-selected="false">Isocandela</button>
+        <button class="tab" role="tab" data-view="overlay" aria-selected="false">Contours</button>
+        <button class="tab" role="tab" data-view="slices" aria-selected="false">Scans</button>
+        <button class="tab" role="tab" data-view="cutoff" aria-selected="false" id="tabCut">Cut-off</button>
+        <button class="tab" role="tab" data-view="gamma" aria-selected="false">Gamma</button>
+        <button class="tab" role="tab" data-view="calib" aria-selected="false">Calibration</button>
+      </div>
+    </div>
+    <div class="viewbar" id="viewbar"></div>
+    <div class="cv"><div id="plots" class="plots"></div></div>
+    <div class="foot"><div class="readout" id="plotNote"></div><div class="legend" id="plotLegend"><span><i style="border-color:#ff9a5a"></i>Measured</span><span><i style="border-color:#7cc4ff;border-top-style:dashed"></i>Simulated</span></div></div>
+  </section>
+
+  <div id="viewExtra"></div>
+
+  <details class="screen fold" open>
+    <summary class="bar"><span class="chev" aria-hidden="true"></span><h2>Test point correlation</h2><span class="cnt" id="tpCount"></span><span class="note" id="tpNote"></span></summary>
+    <div class="tablewrap"><table id="tpTable"></table></div>
+  </details>
+
+  <details class="screen fold method">
+    <summary class="bar"><span class="chev" aria-hidden="true"></span><h2>Method notes</h2><span class="note">conventions and how each figure is computed</span></summary>
+    <div class="mb">
+      <p><strong>Conventions.</strong> H is positive to the right (R), V positive upward (U), seen from behind the lamp. ΔH/ΔV is the shift applied to the simulation so it lines up with the measurement. Type A/B IES files and CSV grids are read as H-V angles directly. Type C (IES/LDT) is converted assuming the optical axis at C0/γ90 with C90 to the right; tick "Mirror left/right" if a beam comes out flipped.</p>
+      <p><strong>CSV.</strong> Matrix layout with H angles across the first row and V angles down the first column (tick "CSV rows are H" if transposed), or three columns H, V, cd. Comma, semicolon or tab separated.</p>
+      <p><strong>Ratio.</strong> Measured / simulated, on a log₂ colour scale so ×2 and ×0.5 look equally far from ×1. RMS deviation and the tolerance band are computed on unmasked cells only.</p>
+      <p><strong>Cut-off.</strong> Vertical scans in 0.05° steps on log-interpolated data. Sharpness G = log₁₀ I(β) − log₁₀ I(β+0.1°), taken at its maximum. The cut-off position β is the centre of the gradient peak (inflection of log I). Linearity is the spread of β across the scan positions. The elbow is where a straight-line fit of the rising shoulder meets the horizontal part, and the shoulder angle comes from that fit. G is only as good as the data resolution near the cut-off.</p>
+      <p><strong>Gamma.</strong> For each measured cell above the threshold, γ = min √(|Δr|²/DTA² + ΔI²/ΔI<sub>tol</sub>²) over nearby simulated positions, searched to 2·DTA (so γ is capped at 2). γ ≤ 1 passes: the simulation matches either in value or within the distance-to-agreement. ΔI<sub>tol</sub> is a share of the local measured value (local) or of measured Imax (global). The plain-ratio pass rate is shown beside it; the gap between them is error that is only a small position shift.</p>
+      <p><strong>Contours.</strong> For each iso level, distances in degrees from every point of one contour to the nearest point of the other, both ways: mean, 95th percentile and maximum (Hausdorff). The signed shift is positive where the simulated line lies outside the measured one. Extents are the furthest cells at or above the level; * marks a window edge.</p>
+      <p><strong>Calibration.</strong> Fits I<sub>cal</sub> = a·(G<sub>σH,σV</sub> ∗ I<sub>sim</sub>)(H−δH, V−δV) + halo + floor, where G is a Gaussian blur, the halo is the simulation blurred by 5° and the floor is uniform. Aim (δ), blur and the linear terms are fitted together because blur moves the apparent centre of an asymmetric beam. Each σ is labelled by how much the fit worsens when it is halved or raised by half: a beam without sharp features in one direction cannot determine σ in that direction.</p>
+    </div>
+  </details>
+</main>
+</div>
+
+<footer>
+  <span>Correlation of simulated and goniometer-measured luminous intensity: alignment, scaling, ratio, gamma, contour, cut-off and calibration analyses.</span>
+  <span>Beam Correlate · © 2026 Jalib Akther</span>
+</footer>
 </div>
 <div class="toast" id="toast" hidden></div>
 
@@ -1137,6 +1233,17 @@ function readOpts(){
     scaleMode: $('scaleMode').value, k: n('k', 1), maskPct: Math.max(0, n('maskPct', 1)), tolPct: Math.max(0.1, n('tolPct', 15))
   };
 }
+function railSummaries(){
+  const n = id => parseFloat($(id).value);
+  const a = (x, p, q, z) => Number.isFinite(x) ? fmtAng(x, p, q, z) : '?';
+  $('svWin').textContent = `${a(n('hmin'), 'R', 'L', 'V')} – ${a(n('hmax'), 'R', 'L', 'V')} · ${a(n('vmin'), 'U', 'D', 'H')} – ${a(n('vmax'), 'U', 'D', 'H')} · ${$('step').value}°`;
+  const am = { fit:'Best fit', imax:'Hot-spot centroid', manual:'Manual offset', none:'No alignment' }[$('alignMode').value];
+  const sm = { flux:'flux matched', imax:'Imax matched', manual:'k ' + $('k').value, none:'absolute' }[$('scaleMode').value];
+  $('svAlign').textContent = `${am} · ${sm}`;
+  $('svEval').textContent = `mask ${$('maskPct').value}% · ±${$('tolPct').value}%`;
+  const np = (st.points || []).length;
+  $('svTp').textContent = `${np} point${np === 1 ? '' : 's'}` + ($('tpPreset').value === 'custom' ? ' · custom' : '');
+}
 function syncAlignInputs(){
   const am = $('alignMode').value, sm = $('scaleMode').value;
   $('dh').disabled = $('dv').disabled = am !== 'manual';
@@ -1205,7 +1312,7 @@ function recomputeCut(){
 /* ---------- compute ---------- */
 let timer = null;
 function schedule(){
-  clearTimeout(timer);
+  clearTimeout(timer); railSummaries();
   timer = setTimeout(run, 180);
 }
 function run(){
@@ -1265,30 +1372,33 @@ function renderKPIs(){
   const rmsPct = Math.pow(2, r.rms) - 1, biasPct = Math.pow(2, r.mean) - 1;
   const cnt = s => r.pts.filter(p => p['j' + s].st === 'pass').length, judged = r.pts.filter(p => p.jm.st !== 'na').length;
   const imaxD = r.Mmax / r.Smax - 1;
+  const cr = st.cutRes;
+  const within = `${(r.inTol*100).toFixed(1)}% within ±${tol}%`;
   const items = [
     ['Offset applied', fmtShift(r.dh, r.dv), o.alignMode === 'none' ? 'no alignment' : o.alignMode === 'fit' ? 'best fit' : o.alignMode === 'imax' ? 'hot-spot centroid' : 'manual', ''],
     ['Scale factor k', '×' + r.k.toFixed(3), o.scaleMode === 'flux' ? `flux in window: meas ÷ sim` : o.scaleMode === 'imax' ? 'Imax meas ÷ sim' : o.scaleMode === 'manual' ? 'manual' : 'absolute values', ''],
     ['Imax measured', fmtCd(r.Mmax) + ' cd', `sim ${fmtCd(r.Smax)} cd (${fmtPct(-imaxD/(1 + imaxD))}) · at ${fmtPos(r.MmaxAt[0], r.MmaxAt[1])}`, ''],
     ['Flux in window', `${r.phiM.toFixed(0)} / ${r.phiS0.toFixed(0)} lm`, `measured / raw sim · ${fmtPct(r.phiM/r.phiS0 - 1)}`, ''],
-    ['RMS deviation', '±' + (rmsPct*100).toFixed(1) + '%', `bias ${fmtPct(biasPct)} · ${r.n.toLocaleString('en-US')} cells`, cls(rmsPct*100, tol, 2*tol)],
-    [`Within ±${tol}%`, (r.inTol*100).toFixed(1) + '%', 'of unmasked cells', cls(100 - r.inTol*100, 30, 60)],
-    ['Correlation r', Number.isFinite(r.r) ? r.r.toFixed(4) : '–', 'log₁₀ intensities', cls(1 - r.r, 0.01, 0.05)],
-    gTile(), cdTile(), calTile(),
-    ['Points passing', judged ? `${cnt('m')} / ${cnt('s')} of ${judged}` : '–', 'measured / simulated', judged && (cnt('m') < judged) ? 'bad' : judged ? 'good' : '']
+    ['RMS deviation', '±' + (rmsPct*100).toFixed(1) + '%', `bias ${fmtPct(biasPct)}` + (cr ? ` · ${within}` : ` · ${r.n.toLocaleString('en-US')} cells`), cls(rmsPct*100, tol, 2*tol)]
   ];
-  const cr = st.cutRes;
   if (cr){
     const gm = cr.gScan.m.g, gs = cr.gScan.s.g, gMin = st.cut.gMin;
     const ok = gMin == null ? '' : (gm >= gMin && gs >= gMin) ? 'good' : 'bad';
-    items.splice(5, 0, ['Cut-off sharpness G', `${Number.isFinite(gm) ? gm.toFixed(2) : '–'} / ${Number.isFinite(gs) ? gs.toFixed(2) : '–'}`,
+    items.push(['Cut-off sharpness G', `${Number.isFinite(gm) ? gm.toFixed(2) : '–'} / ${Number.isFinite(gs) ? gs.toFixed(2) : '–'}`,
       `meas / sim at ${fmtAng(st.cut.gAt, 'R', 'L', 'V-V')}${gMin != null ? ', min ' + gMin : ''}`, ok]);
-  }
-  $('kpis').innerHTML = items.map(([k, v, d, c]) => `<div class="kpi"><div class="k">${k}</div><div class="v ${c}">${v}</div><div class="d">${d}</div></div>`).join('');
+  } else items.push([`Within ±${tol}%`, (r.inTol*100).toFixed(1) + '%', 'of unmasked cells', cls(100 - r.inTol*100, 30, 60)]);
+  items.push(['Correlation r', Number.isFinite(r.r) ? r.r.toFixed(4) : '–', 'log₁₀ intensities', cls(1 - r.r, 0.01, 0.05)],
+    cdTile(), calTile(),
+    ['Test points', judged ? `${cnt('m')} / ${cnt('s')} of ${judged}` : '–', judged ? 'passing, measured / simulated' : 'no limits set for this function', judged && (cnt('m') < judged || cnt('s') < judged) ? 'bad' : '']);
+  const g = gTile();
+  const verdict = `<div class="kv verdict ${g[3]}"><b>Correlation · gamma ${st.gamma.dIPct}% / ${st.gamma.dta}°</b><span class="v">${g[1] === '–' ? '–' : g[1] + ' pass'}</span><em>${g[2]}</em></div>`;
+  $('kpis').innerHTML = verdict + items.map(([k, v, d, c]) => `<div class="kv ${c}"><b>${k}</b><span class="v">${v}</span><em>${d}</em></div>`).join('');
+  railSummaries();
 }
 function gTile(){
   const g = st.gRes, o = st.gamma;
   if (!g || !g.n) return ['Gamma pass rate', '–', 'no cells above threshold', ''];
-  return ['Gamma pass rate', (g.pass*100).toFixed(1) + '%', `${o.dIPct}% / ${o.dta}° ${o.norm} · ratio alone ${(g.ratioPass*100).toFixed(1)}%`, g.pass >= 0.95 ? 'good' : g.pass >= 0.9 ? 'warn' : 'bad'];
+  return ['Gamma pass rate', (g.pass*100).toFixed(1) + '%', `${o.norm} criteria · ratio alone ${(g.ratioPass*100).toFixed(1)}% · mean γ ${g.mean.toFixed(2)}`, g.pass >= 0.95 ? 'good' : g.pass >= 0.9 ? 'warn' : 'bad'];
 }
 function cdTile(){
   const ok = (st.cdRes || []).filter(c => c.ok);
@@ -1302,23 +1412,31 @@ function calTile(){
   return ['Blur <span class="nc">σ</span> H / V', `${c.sh.toFixed(2)}° / ${c.sv.toFixed(2)}°`, `stray ${(c.haloPct + c.floorPct).toFixed(2)}% Imax · RMS ±${(c.after.rms*100).toFixed(1)}% after`, ''];
 }
 function renderEmpty(msg){
-  $('kpis').innerHTML = `<div class="kpi" style="grid-column:1/-1"><div class="k">Status</div><div class="d" style="font-size:14px;color:var(--ink)">${msg ? msg : 'Load a measured and a simulated file, or the demo pair, to start.'}</div></div>`;
+  $('kpis').innerHTML = `<div class="kv status"><b>Status</b><em style="font-size:14.5px;color:var(--ink)">${msg ? msg : 'Load a measured and a simulated file, or the demo pair, to start.'}</em></div>`;
   $('plots').innerHTML = ''; $('plotNote').textContent = ''; $('tpTable').innerHTML = ''; $('viewExtra').innerHTML = '';
 }
 
 /* ---------- plots ---------- */
 function themeColors(forReport){
   if (forReport) return { ink:'#1B2025', ink2:'#56616B', line:'#D6DBDD', panel:'#FFFFFF', meas:'#B4530B', sim:'#3B57C4', mid:'#F4F2EC', neg:'#2F5FB0', pos:'#C2410C', g0:'#E4F1EA', g1:'#3D8F63', g2:'#E9A23B', g3:'#B42318', cal:'#22774A' };
-  return { ink:tok('--ink'), ink2:tok('--ink-2'), line:tok('--line'), panel:tok('--panel'), meas:tok('--meas'), sim:tok('--sim'), mid:tok('--div-mid'), neg:tok('--div-neg'), pos:tok('--div-pos'), g0:tok('--gam-0'), g1:tok('--gam-1'), g2:tok('--gam-2'), g3:tok('--gam-3'), cal:tok('--good') };
+  return { ink:'#c7d4de', ink2:'#8494a1', line:'rgba(199,212,222,.13)', panel:'#0d151d', meas:'#ff9a5a', sim:'#7cc4ff', mid:'#2c3a47', neg:'#4f8fe8', pos:'#f28a3c', g0:'#15322a', g1:'#3fae78', g2:'#e0a63a', g3:'#ff6b5d', cal:'#7ee2a8', dark:true };
+}
+function angTicks(lo, hi, pos, neg, zero){
+  const span = hi - lo, st0 = span > 40 ? 10 : span > 16 ? 5 : span > 6 ? 2 : 1;
+  const vals = []; for (let x = Math.ceil(lo/st0)*st0; x <= hi + 1e-9; x += st0) vals.push(+x.toFixed(6));
+  return { tickmode:'array', tickvals: vals, ticktext: vals.map(x => x === 0 ? zero : Math.abs(x) + (x > 0 ? pos : neg)) };
 }
 function baseLayout(c, extra){
+  const w = st.res ? st.res.win : null;
+  const ax = { gridcolor:c.line, zerolinecolor:c.dark ? 'rgba(199,212,222,.45)' : c.ink2, zerolinewidth:1, linecolor:c.line, tickcolor:c.line, ticks:'outside', tickfont:{ color:c.ink2, size:11.5 } };
   return Object.assign({
     paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:c.panel,
-    font:{ family:'IBM Plex Sans, system-ui, sans-serif', size:12, color:c.ink },
-    margin:{ l:56, r:20, t:34, b:46 },
-    xaxis:{ title:{ text:'H (°)   L ← → R', font:{ size:12, color:c.ink2 } }, gridcolor:c.line, zerolinecolor:c.ink2, zerolinewidth:1, linecolor:c.line, tickcolor:c.line, ticks:'outside' },
-    yaxis:{ title:{ text:'V (°)', font:{ size:12, color:c.ink2 } }, gridcolor:c.line, zerolinecolor:c.ink2, zerolinewidth:1, linecolor:c.line, tickcolor:c.line, ticks:'outside' },
-    hoverlabel:{ font:{ family:'IBM Plex Mono, monospace', size:12 } },
+    font:{ family:'Source Sans 3, Segoe UI, system-ui, sans-serif', size:12.5, color:c.ink },
+    margin:{ l:50, r:20, t:36, b:40 },
+    xaxis:Object.assign({}, ax, w ? angTicks(w.hmin, w.hmax, 'R', 'L', 'V') : {}),
+    yaxis:Object.assign({}, ax, w ? angTicks(w.vmin, w.vmax, 'U', 'D', 'H') : {}),
+    hoverlabel:{ font:{ family:'Source Sans 3, system-ui, sans-serif', size:13 } },
+    modebar:{ bgcolor:'rgba(0,0,0,0)', color:c.ink2, activecolor:c.ink },
     showlegend:false
   }, extra || {});
 }
@@ -1340,7 +1458,8 @@ function isoLevels(){
   const std = [125, 250, 500, 1000, 2500, 5000, 10000, 20000, 40000, 80000];
   return std.filter(x => x < 0.95*Math.max(r.Mmax, r.Smax) && x > r.thr);
 }
-function levelColor(i, n){ const t = n <= 1 ? 0.5 : i/(n-1); const stops = FALSE_COLOR; let k = 0; while (k < stops.length-2 && t > stops[k+1][0]) k++; return stops[k+1][1]; }
+const LINE_COLOR = [[0,'#5b9bf0'],[0.2,'#2ec4c4'],[0.4,'#5fd068'],[0.6,'#d9cf3f'],[0.8,'#f59e3a'],[1,'#ff5f57']];
+function levelColor(i, n){ const t = n <= 1 ? 0.5 : i/(n-1); const stops = LINE_COLOR; let k = 0; while (k < stops.length-2 && t > stops[k+1][0]) k++; return stops[k+1][1]; }
 
 function figRatio(c, R, Sg, title){
   const r = st.res, span = st.ratioSpan; R = R || r.R; Sg = Sg || r.S;
@@ -1383,7 +1502,7 @@ function figOverlay(c){
 }
 function figSlices(c){
   const r = st.res, sl = BC.slices(r, st.sliceH, st.sliceV);
-  const yax = { type: st.logY ? 'log' : 'linear', title:{ text:'cd', font:{ size:12, color:c.ink2 } }, gridcolor:c.line, linecolor:c.line, tickcolor:c.line, ticks:'outside', exponentformat:'none' };
+  const yax = { dtick: st.logY ? 1 : undefined, type: st.logY ? 'log' : 'linear', title:{ text:'cd', font:{ size:12, color:c.ink2 } }, gridcolor:c.line, linecolor:c.line, tickcolor:c.line, ticks:'outside', exponentformat:'none' };
   const fH = { data:[
       { type:'scatter', mode:'lines', x:sl.hh, y:sl.hM.map(x => x > 0 ? x : null), name:'Measured', line:{ color:c.meas, width:2 } },
       { type:'scatter', mode:'lines', x:sl.hh, y:sl.hS.map(x => x > 0 ? x : null), name:'Simulated', line:{ color:c.sim, width:2, dash:'dash' } } ],
@@ -1455,15 +1574,19 @@ function cutRows(){
   }
   return { rows, pill };
 }
+const card = (title, note, inner, cnt) => `<section class="screen"><div class="bar"><h2>${title}</h2>${cnt || ''}${note ? `<span class="note">${note}</span>` : ''}</div>${inner}</section>`;
 function renderCutTable(){
   const cr = st.cutRes; if (!cr){ $('viewExtra').innerHTML = ''; return; }
   const { rows, pill } = cutRows();
   const vr = st.res.vRes, warn = [];
   if (vr.m > 0.1) warn.push(`measured data has ${(+vr.m.toFixed(3))}° vertical resolution`);
   if (vr.s > 0.1) warn.push(`simulated data has ${(+vr.s.toFixed(3))}° vertical resolution`);
-  $('viewExtra').innerHTML = (warn.length ? `<p class="warnline">G and β are resolution-limited: ${warn.join(' and ')}. Use 0.05° to 0.1° data around the cut-off for a fair comparison.</p>` : '') +
-    `<div class="tablewrap"><table><thead><tr><th>Cut-off metric</th><th>Measured</th><th>Simulated</th><th>Meas − sim</th><th>Limit</th><th>Measured</th><th>Simulated</th></tr></thead><tbody>` +
-    rows.map(r => `<tr><td>${r[0]}</td><td class="mono">${r[1]}</td><td class="mono">${r[2]}</td><td class="mono">${r[3]}</td><td class="mono">${r[4]}</td><td>${pill(r[5])}</td><td>${pill(r[6])}</td></tr>`).join('') + '</tbody></table></div>';
+  const fails = rows.filter(r => r[5] === false || r[6] === false).length;
+  $('viewExtra').innerHTML = card('Cut-off metrics', 'vertical scans in 0.05° steps · G = log I(β) − log I(β+0.1°)',
+    (warn.length ? `<p class="warnline">G and β are resolution-limited: ${warn.join(' and ')}. Use 0.05° to 0.1° data around the cut-off for a fair comparison.</p>` : '') +
+    `<div class="tablewrap"><table><thead><tr><th>Metric</th><th>Measured</th><th>Simulated</th><th>Meas − sim</th><th>Limit</th><th>Measured</th><th>Simulated</th></tr></thead><tbody>` +
+    rows.map(r => `<tr><td>${r[0]}</td><td class="mono">${r[1]}</td><td class="mono">${r[2]}</td><td class="mono">${r[3]}</td><td class="mono">${r[4]}</td><td>${pill(r[5])}</td><td>${pill(r[6])}</td></tr>`).join('') + '</tbody></table></div>',
+    fails ? `<span class="cnt f">${fails} failing</span>` : '');
 }
 
 /* ---------- gamma, contour and calibration views ---------- */
@@ -1488,9 +1611,9 @@ function gammaTableHTML(){
   const rows = g.bands.map(b => [b.name, b.n, b.pass/b.n, b.rpass/b.n]);
   rows.push(['All evaluated cells', g.n, g.pass, g.ratioPass]);
   const calG = st.calRes && st.calFor === st.res && st.calRes.gamma ? st.calRes.gamma : null;
-  return `<div class="tablewrap"><table><thead><tr><th>Intensity band</th><th>Cells</th><th>Gamma pass</th><th>Ratio-only pass</th><th>Gained by DTA</th></tr></thead><tbody>` +
+  return card('Gamma pass rate by intensity', `${st.gamma.dIPct}% / ${st.gamma.dta}° · ${st.gamma.norm}`, `<div class="tablewrap"><table><thead><tr><th>Intensity band</th><th>Cells</th><th>Gamma pass</th><th>Ratio-only pass</th><th>Gained by DTA</th></tr></thead><tbody>` +
     rows.map((r, k) => `<tr><td${k === rows.length - 1 ? ' style="font-weight:600"' : ''}>${r[0]}</td><td class="mono">${r[1].toLocaleString('en-US')}</td><td class="mono dl ${cls(r[2])}">${pc(r[2])}</td><td class="mono">${pc(r[3])}</td><td class="mono">${Number.isFinite(r[2] - r[3]) ? '+' + ((r[2] - r[3])*100).toFixed(1) + ' pts' : '–'}</td></tr>`).join('') +
-    `</tbody></table></div><p class="interp">Mean γ ${g.mean.toFixed(3)}, 95th percentile γ ${g.p95.toFixed(3)}. <strong>Gained by DTA</strong> is the share of cells that fail on value alone but pass once a ${st.gamma.dta}° position tolerance is allowed: error that comes from small shifts in steep gradients, not from wrong intensity.${calG ? ` After calibration (Calibration tab) the gamma pass rate is ${pc(calG.pass)}.` : ''}</p>`;
+    `</tbody></table></div>`) + `<p class="interp">Mean γ ${g.mean.toFixed(3)}, 95th percentile γ ${g.p95.toFixed(3)}. <strong>Gained by DTA</strong> is the share of cells that fail on value alone but pass once a ${st.gamma.dta}° position tolerance is allowed: error that comes from small shifts in steep gradients, not from wrong intensity.${calG ? ` After calibration (Calibration tab) the gamma pass rate is ${pc(calG.pass)}.` : ''}</p>`;
 }
 const fmtExt = (x, edge, pos, neg) => !Number.isFinite(x) ? '–' : fmtAng(+x.toFixed(2), pos, neg, '0') + (edge ? '*' : '');
 function contourTableHTML(){
@@ -1498,12 +1621,12 @@ function contourTableHTML(){
   const sg = x => !Number.isFinite(x) ? '–' : Math.abs(x) < 0.0005 ? '0.000°' : (x > 0 ? '+' : '−') + Math.abs(x).toFixed(3) + '° ' + (x > 0 ? 'out' : 'in');
   const dc = x => !Number.isFinite(x) ? '' : x <= 0.1 ? 'good' : x <= 0.25 ? 'warn' : 'bad';
   const ext = (c, k, pos, neg) => `${fmtExt(c.rm[k], c.rm.edge[k], pos, neg)} / ${fmtExt(c.rs[k], c.rs.edge[k], pos, neg)}`;
-  return `<div class="tablewrap"><table><thead><tr><th>Iso level</th><th>Mean shift</th><th>95%</th><th>Max</th><th>Sim vs meas</th><th>Area sim ÷ meas</th><th>Left m / s</th><th>Right m / s</th><th>Down m / s</th><th>Up m / s</th></tr></thead><tbody>` +
+  return card('Contour displacement', 'measured vs simulated iso lines, in degrees', `<div class="tablewrap"><table><thead><tr><th>Iso level</th><th>Mean shift</th><th>95%</th><th>Max</th><th>Sim vs meas</th><th>Area sim ÷ meas</th><th>Left m / s</th><th>Right m / s</th><th>Down m / s</th><th>Up m / s</th></tr></thead><tbody>` +
     cd.map(c => `<tr><td>${c.L.toLocaleString('en-US')} cd</td>` + (c.ok
       ? `<td class="mono dl ${dc(c.mean)}">${c.mean.toFixed(3)}°</td><td class="mono">${c.p95.toFixed(3)}°</td><td class="mono">${c.max.toFixed(3)}°</td><td class="mono">${sg(c.signed)}</td>`
       : `<td class="mono" colspan="4" style="text-align:center;color:var(--ink-2)">level not reached in both</td>`) +
       `<td class="mono">${Number.isFinite(c.areaRatio) ? '×' + c.areaRatio.toFixed(3) : '–'}</td><td class="mono">${ext(c, 'left', 'R', 'L')}</td><td class="mono">${ext(c, 'right', 'R', 'L')}</td><td class="mono">${ext(c, 'down', 'U', 'D')}</td><td class="mono">${ext(c, 'up', 'U', 'D')}</td></tr>`).join('') +
-    `</tbody></table></div><p class="interp">Distances are measured in degrees between the measured and simulated iso lines (simulation aligned and scaled). <strong>Sim vs meas</strong> is positive where the simulated line lies outside the measured one. Extents give the furthest angle each level reaches; * marks the edge of the comparison window.</p>`;
+    `</tbody></table></div>`) + `<p class="interp">Distances are measured in degrees between the measured and simulated iso lines (simulation aligned and scaled). <strong>Sim vs meas</strong> is positive where the simulated line lies outside the measured one. Extents give the furthest angle each level reaches; * marks the edge of the comparison window.</p>`;
 }
 function calScanAt(){ return st.cut ? st.cut.gAt : st.sliceH; }
 function figCalScan(c){
@@ -1515,7 +1638,7 @@ function figCalScan(c){
     { type:'scatter', mode:'lines', x:r.vs, y:col(r.S), name:'Simulated', line:{ color:c.sim, width:1.6, dash:'dash' } },
     { type:'scatter', mode:'lines', x:r.vs, y:col(cal.C), name:'Calibrated simulation', line:{ color:c.cal, width:1.8, dash:'dot' } } ];
   return { data, layout: baseLayout(c, { showlegend:true, legend:{ x:0.01, y:0.98, xanchor:'left', yanchor:'top', bgcolor:'rgba(0,0,0,0)', font:{ size:11 } }, hovermode:'x unified',
-    yaxis:{ type:'log', title:{ text:'cd', font:{ size:12, color:c.ink2 } }, gridcolor:c.line, linecolor:c.line, tickcolor:c.line, ticks:'outside', exponentformat:'none' },
+    yaxis:{ type:'log', dtick:1, title:{ text:'cd', font:{ size:12, color:c.ink2 } }, gridcolor:c.line, linecolor:c.line, tickcolor:c.line, ticks:'outside', exponentformat:'none' },
     xaxis:{ title:{ text:'V (°)   D ← → U', font:{ size:12, color:c.ink2 } }, gridcolor:c.line, zerolinecolor:c.ink2, linecolor:c.line, ticks:'outside', tickcolor:c.line },
     title:{ text:`Vertical scan at H = ${fmtAng(r.hs[i], 'R', 'L', '0')}: measured, simulated and calibrated`, font:{ size:13, color:c.ink }, x:0.01, xanchor:'left' } }) };
 }
@@ -1546,10 +1669,10 @@ function calTableHTML(){
   if (c.riseH >= 0.005 && sh >= 0.03) msgs.push(`Horizontally the extra spread is about ${sh.toFixed(2)}°.`);
   if (stray >= 0.05) msgs.push(`The simulation lacks about ${stray.toFixed(2)}% of Imax of stray light (${c.haloPct.toFixed(2)}% as a wide halo, ${c.floorPct.toFixed(2)}% as a flat floor). This matters most for B50L and other glare points.`);
   if (!msgs.length) msgs.push('The simulation already matches the measured spread; no significant blur or stray light was needed.');
-  return `<div class="tablewrap"><table><thead><tr><th>Fitted parameter</th><th>Value</th><th class="lft">Note</th></tr></thead><tbody>` +
-    calRows().map(r => `<tr><td>${r[0]}</td><td class="mono">${r[1]}</td><td class="lft">${r[3] ? `<span class="det ${r[3]}">${r[2]}</span>` : r[2]}</td></tr>`).join('') + `</tbody></table></div>` +
-    `<div class="tablewrap"><table><thead><tr><th>Agreement</th><th>Simulation as is</th><th>Calibrated simulation</th></tr></thead><tbody>` +
-    ba.map(r => `<tr><td>${r[0]}</td><td class="mono">${r[1]}</td><td class="mono">${r[2]}</td></tr>`).join('') + `</tbody></table></div>` +
+  return card('Fitted calibration', 'blur, aim and stray light that turn the simulation into the measurement', `<div class="tablewrap"><table><thead><tr><th>Parameter</th><th>Value</th><th class="lft">Note</th></tr></thead><tbody>` +
+    calRows().map(r => `<tr><td>${r[0]}</td><td class="mono">${r[1]}</td><td class="lft">${r[3] ? `<span class="det ${r[3]}">${r[2]}</span>` : r[2]}</td></tr>`).join('') + `</tbody></table></div>`) +
+    card('Agreement before and after', '', `<div class="tablewrap"><table><thead><tr><th>Measure</th><th>Simulation as is</th><th>Calibrated simulation</th></tr></thead><tbody>` +
+    ba.map(r => `<tr><td>${r[0]}</td><td class="mono">${r[1]}</td><td class="mono">${r[2]}</td></tr>`).join('') + `</tbody></table></div>`) +
     `<p class="interp"><strong>Reading the fit.</strong> ${msgs.join(' ')} Blur usually comes from LED die size and placement tolerance, surface roughness or scatter missing from the optical model, and the goniometer detector aperture. Halo and floor come from lens haze, housing reflections, dust and lab stray light. Feed σ back into the simulation as source blur or a scatter (BSDF) setting, then compare again.</p>`;
 }
 
@@ -1560,11 +1683,11 @@ function plotDivs(n){
 }
 function renderViewbar(){
   const v = st.view, vb = $('viewbar');
-  if (v === 'ratio') vb.innerHTML = `<label class="f">Colour range<select id="vbSpan"><option value="0.32">×0.8 – ×1.25</option><option value="0.58">×0.67 – ×1.5</option><option value="1">×0.5 – ×2</option><option value="2">×0.25 – ×4</option></select></label><label class="f">Iso lines (cd)<input id="vbLev" type="text" placeholder="auto" style="width:160px;font-family:var(--f-mono);font-size:13px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink)"></label>`;
-  else if (v === 'iso' || v === 'overlay') vb.innerHTML = `<label class="f">Iso lines (cd)<input id="vbLev" type="text" placeholder="auto" style="width:200px;font-family:var(--f-mono);font-size:13px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink)"></label>`;
-  else if (v === 'gamma') vb.innerHTML = `<label class="f">ΔI (%)<input id="gmI" type="number" step="1" min="1"></label><label class="f">DTA (°)<input id="gmD" type="number" step="0.05" min="0.01"></label><label class="f">Normalisation<select id="gmN"><option value="local">Local (% of measured)</option><option value="global">Global (% of Imax)</option></select></label><label class="f">Evaluate above (% Imax)<input id="gmT" type="number" step="0.5" min="0"></label><label class="f">Iso lines (cd)<input id="vbLev" type="text" placeholder="auto" style="width:150px"></label>`;
+  if (v === 'ratio') vb.innerHTML = `<label class="f">Colour range<select id="vbSpan"><option value="0.32">×0.8 – ×1.25</option><option value="0.58">×0.67 – ×1.5</option><option value="1">×0.5 – ×2</option><option value="2">×0.25 – ×4</option></select></label><label class="f">Iso lines (cd)<input id="vbLev" type="text" placeholder="auto"></label>`;
+  else if (v === 'iso' || v === 'overlay') vb.innerHTML = `<label class="f">Iso lines (cd)<input id="vbLev" type="text" placeholder="auto"></label>`;
+  else if (v === 'gamma') vb.innerHTML = `<label class="f">ΔI (%)<input id="gmI" type="number" step="1" min="1"></label><label class="f">DTA (°)<input id="gmD" type="number" step="0.05" min="0.01"></label><label class="f">Normalisation<select id="gmN"><option value="local">Local (% of measured)</option><option value="global">Global (% of Imax)</option></select></label><label class="f">Evaluate above (% Imax)<input id="gmT" type="number" step="0.5" min="0"></label><label class="f">Iso lines (cd)<input id="vbLev" type="text" placeholder="auto"></label>`;
   else if (v === 'calib') vb.innerHTML = `<span class="hint" style="margin:0">Fits blur, stray light and aim to the current aligned and scaled simulation. Change alignment, scaling or the window on the left and the fit reruns.</span>`;
-  else if (v === 'cutoff') vb.innerHTML = `<label class="f">Scans at H (°)<input id="cbScans" type="text" style="width:170px"></label><label class="f">G check at H (°)<input id="cbGAt" type="number" step="0.5"></label><label class="f">Min G<input id="cbGMin" type="number" step="0.01" placeholder="none"></label><label class="f">Linearity max (°)<input id="cbLin" type="number" step="0.05" placeholder="none"></label><label class="f">Simulation<select id="cbAl"><option value="raw">As simulated</option><option value="al">Aligned</option></select></label>`;
+  else if (v === 'cutoff') vb.innerHTML = `<label class="f">Scans at H (°)<input id="cbScans" type="text"></label><label class="f">G check at H (°)<input id="cbGAt" type="number" step="0.5"></label><label class="f">Min G<input id="cbGMin" type="number" step="0.01" placeholder="none"></label><label class="f">Linearity max (°)<input id="cbLin" type="number" step="0.05" placeholder="none"></label><label class="f">Simulation<select id="cbAl"><option value="raw">As simulated</option><option value="al">Aligned</option></select></label>`;
   else vb.innerHTML = `<label class="f">Horizontal scan at V (°)<input id="vbSV" type="number" step="0.01"></label><label class="f">Vertical scan at H (°)<input id="vbSH" type="number" step="0.01"></label><label class="ck"><input type="checkbox" id="vbLog">Log scale</label><span class="hint" style="margin:0">Dotted lines mark the steepest gradient (cut-off) on the vertical scan.</span>`;
   if (v === 'cutoff' && st.cut){
     const cut = st.cut;
@@ -1602,6 +1725,8 @@ function renderView(){
   if (!hasPlotly){ $('plots').innerHTML = '<div class="plotbox" style="padding:16px">Charts are unavailable because Plotly could not be loaded: the bundled copy (vendor/plotly.min.js) was not found next to this page and the public CDNs were blocked. Keep the vendor folder beside index.html, or open the hosted page. Statistics and the tables still work.</div>'; return; }
   const c = themeColors(false), v = st.view;
   document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.view === v)));
+  $('viewTitle').textContent = { ratio:'Ratio map', iso:'Isocandela', overlay:'Contour overlay', slices:'Intensity scans', cutoff:'Cut-off', gamma:'Gamma index', calib:'Calibration' }[v] || '';
+  $('plotLegend').hidden = !['overlay', 'slices', 'cutoff'].includes(v);
   if (!$('viewbar').dataset.view || $('viewbar').dataset.view !== v){ $('viewbar').dataset.view = v; renderViewbar(); }
   let note = '';
   $('viewExtra').innerHTML = '';
@@ -1621,13 +1746,14 @@ function renderView(){
     if (!(st.calRes && st.calFor === st.res)){
       plotDivs(0);
       $('plotNote').textContent = '';
-      $('viewExtra').innerHTML = st.calErr ? `<p class="interp" style="color:var(--bad)">The calibration fit failed: ${st.calErr}</p>` : '<p class="busyline">Fitting blur, stray light and aim. This takes a few seconds.</p>';
+      $('viewExtra').innerHTML = st.calErr ? `<p class="busyline" style="color:var(--fail)">The calibration fit failed: ${st.calErr}</p>` : '<p class="busyline">Fitting blur, stray light and aim. This takes a few seconds.</p>';
+      $('plots').innerHTML = '';
       ensureCalibration(); return;
     }
     const cal = st.calRes, [a, b, d] = plotDivs(3);
     const f1 = figRatio(c, st.res.R, st.res.S, 'Before: measured ÷ simulated'), f2 = figRatio(c, cal.Rafter, cal.C, 'After: measured ÷ calibrated simulation'), f3 = figCalScan(c);
     Plotly.react(a, f1.data, f1.layout, CFG); Plotly.react(b, f2.data, f2.layout, CFG); Plotly.react(d, f3.data, f3.layout, CFG);
-    note = 'Both maps use the same colour scale (set it in the Ratio map tab). What remains after calibration is shape error that blur and stray light cannot explain.';
+    note = 'Both maps use the same colour scale (set it in the Ratio tab). What remains after calibration is shape error that blur and stray light cannot explain.';
     $('viewExtra').innerHTML = calTableHTML(); }
   else if (v === 'cutoff'){
     if (!st.cutRes){ plotDivs(0); $('plotNote').textContent = 'No cut-off could be analysed in this window.'; $('viewExtra').innerHTML = ''; return; }
@@ -1657,13 +1783,19 @@ function renderTable(){
   const lim = limText;
   const dcls = d => !Number.isFinite(d) ? '' : Math.abs(d) <= tol ? 'good' : Math.abs(d) <= 2*tol ? 'warn' : 'bad';
   const margin = j => Number.isFinite(j.margin) ? fmtPct(j.margin, 0) : '';
-  $('tpTable').innerHTML = `<thead><tr><th>Point</th><th>Position</th><th>Measured cd</th><th>Simulated cd</th><th>Meas vs sim</th><th>Limit</th><th>Measured</th><th>Simulated</th></tr></thead><tbody>` +
-    (r.pts.length ? r.pts.map(p => `<tr><td><strong>${p.name}</strong></td><td>${fmtPos(p.h, p.v)}</td><td class="mono">${fmtCd(p.m)}</td><td class="mono">${fmtCd(p.s)}</td><td class="mono dl ${dcls(p.delta)}">${fmtPct(p.delta)}</td><td class="mono">${lim(p)}</td><td>${pill(p.jm)} <span class="mono" style="color:var(--ink-2)">${margin(p.jm)}</span></td><td>${pill(p.js)} <span class="mono" style="color:var(--ink-2)">${margin(p.js)}</span></td></tr>`).join('')
+  const judged = r.pts.filter(p => p.jm.st !== 'na' || p.js.st !== 'na');
+  const failM = r.pts.filter(p => p.jm.st === 'fail').length, failS = r.pts.filter(p => p.js.st === 'fail').length;
+  const tc = $('tpCount');
+  tc.className = 'cnt' + (judged.length ? (failM || failS ? ' f' : ' p') : '');
+  tc.textContent = !judged.length ? (r.pts.length ? `${r.pts.length} points, no limits` : '') : (failM || failS) ? `${failM} measured · ${failS} simulated failing` : `all ${judged.length} pass`;
+  $('tpNote').textContent = ($('tpPreset').value === 'custom' ? 'custom points' : FUNCS[st.func].label) + ' · margin to limit beside each verdict';
+  $('tpTable').innerHTML = `<thead><tr><th>Point</th><th class="lft">Position</th><th>Measured cd</th><th>Simulated cd</th><th>Meas vs sim</th><th>Limit</th><th>Measured</th><th>Simulated</th></tr></thead><tbody>` +
+    (r.pts.length ? r.pts.map(p => `<tr><td><strong>${p.name}</strong></td><td class="lft">${fmtPos(p.h, p.v)}</td><td class="mono">${fmtCd(p.m)}</td><td class="mono">${fmtCd(p.s)}</td><td class="mono dl ${dcls(p.delta)}">${fmtPct(p.delta)}</td><td class="mono">${lim(p)}</td><td>${pill(p.jm)} <span class="mono" style="color:var(--ink-2)">${margin(p.jm)}</span></td><td>${pill(p.js)} <span class="mono" style="color:var(--ink-2)">${margin(p.js)}</span></td></tr>`).join('')
       : '<tr><td colspan="8" style="text-align:left;color:var(--ink-2)">No test points defined.</td></tr>') + '</tbody>';
 }
 
 /* ---------- test points editor ---------- */
-function setPoints(list){ st.points = list; $('tpJson').value = '[\n' + list.map(p => ' ' + JSON.stringify(p)).join(',\n') + '\n]'; }
+function setPoints(list){ st.points = list; $('tpJson').value = '[\n' + list.map(p => ' ' + JSON.stringify(p)).join(',\n') + '\n]'; railSummaries(); }
 function applyPointsJson(){
   try {
     const arr = JSON.parse($('tpJson').value);
@@ -1723,7 +1855,7 @@ function pointsCSV(){
 }
 function gridCSV(){
   const r = st.res;
-  const lines = ['# beamCorrelate ratio grid, log2(measured / simulated); empty = masked', '# measured: ' + st.meas.name + '; simulated: ' + st.sim.name,
+  const lines = ['# Beam Correlate ratio grid, log2(measured / simulated); empty = masked', '# measured: ' + st.meas.name + '; simulated: ' + st.sim.name,
     '# shift ' + r.dh + ' deg H, ' + r.dv + ' deg V; scale ' + r.k.toFixed(5), 'V\\H,' + r.hs.join(',')];
   for (let j = r.vs.length - 1; j >= 0; j--) lines.push(r.vs[j] + ',' + Array.from(r.R[j], x => Number.isFinite(x) ? x.toFixed(4) : '').join(','));
   return lines.join('\n');
@@ -1784,8 +1916,8 @@ ${im(cT, 'Cut-off line trace; dotted lines are the scan positions, diamonds the 
     ['Blur σ H / V', st.calRes && st.calFor === r ? `${st.calRes.sh.toFixed(3)}° / ${st.calRes.sv.toFixed(3)}°, stray light ${(st.calRes.haloPct + st.calRes.floorPct).toFixed(2)}% Imax` : '–']];
   const ptRows = r.pts.map(p => `<tr><td>${esc(p.name)}</td><td>${fmtPos(p.h, p.v)}</td><td>${fmtCd(p.m)}</td><td>${fmtCd(p.s)}</td><td>${fmtPct(p.delta)}</td><td>${limText(p)}</td><td class="${p.jm.st}">${p.jm.st}</td><td class="${p.js.st}">${p.js.st}</td></tr>`).join('');
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Correlation report: ${esc(st.sim.name)} vs ${esc(st.meas.name)}</title>
-<style>body{font-family:"IBM Plex Sans",system-ui,sans-serif;color:#1B2025;max-width:1100px;margin:32px auto;padding:0 20px;font-size:14px;line-height:1.5}h1{font-size:24px;margin:0 0 4px}h2{font-size:16px;margin:28px 0 8px;border-bottom:1px solid #D6DBDD;padding-bottom:4px}.sub{color:#56616B;margin:0 0 18px}table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}td,th{border-bottom:1px solid #E3E6E8;padding:6px 8px;text-align:left;vertical-align:top}th{background:#F2F4F3;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:#56616B}.kv td:first-child{width:220px;color:#56616B}.pass{color:#22774A;font-weight:600}.fail{color:#B42318;font-weight:600}figure{margin:16px 0}img{max-width:100%;border:1px solid #E3E6E8}figcaption{font-size:12px;color:#56616B}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media print{h2{break-after:avoid}figure{break-inside:avoid}}</style></head><body>
-<h1>Simulation vs measurement correlation</h1><p class="sub">${esc(st.sim.name)} vs ${esc(st.meas.name)} · generated ${stamp()} with beamCorrelate</p>
+<style>body{font-family:"Source Sans 3","Segoe UI",system-ui,sans-serif;color:#1B2025;max-width:1100px;margin:32px auto;padding:0 20px;font-size:14px;line-height:1.5}h1{font-size:24px;margin:0 0 4px}h2{font-size:16px;margin:28px 0 8px;border-bottom:1px solid #D6DBDD;padding-bottom:4px}.sub{color:#56616B;margin:0 0 18px}table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}td,th{border-bottom:1px solid #E3E6E8;padding:6px 8px;text-align:left;vertical-align:top}th{background:#F2F4F3;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:#56616B}.kv td:first-child{width:220px;color:#56616B}.pass{color:#22774A;font-weight:600}.fail{color:#B42318;font-weight:600}figure{margin:16px 0}img{max-width:100%;border:1px solid #E3E6E8}figcaption{font-size:12px;color:#56616B}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media print{h2{break-after:avoid}figure{break-inside:avoid}}</style></head><body>
+<h1>Beam Correlate · simulation vs measurement</h1><p class="sub">${esc(st.sim.name)} vs ${esc(st.meas.name)} · ${esc(FUNCS[st.func].label)} · generated ${stamp()}</p>
 <h2>Summary</h2><table class="kv">${kv.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}</table>
 <h2>Test points</h2><table><thead><tr><th>Point</th><th>Position</th><th>Measured cd</th><th>Simulated cd</th><th>Meas vs sim</th><th>Limit</th><th>Measured</th><th>Simulated</th></tr></thead><tbody>${ptRows || '<tr><td colspan="8">No test points defined.</td></tr>'}</tbody></table>
 ${cutHTML}
@@ -1801,6 +1933,12 @@ ${calHTML}
 /* ---------- wiring ---------- */
 $('fileMeas').addEventListener('change', e => { const f = e.target.files[0]; if (f) loadFile('meas', f); e.target.value = ''; });
 $('fileSim').addEventListener('change', e => { const f = e.target.files[0]; if (f) loadFile('sim', f); e.target.value = ''; });
+[['dropMeas', 'meas'], ['dropSim', 'sim']].forEach(([id, which]) => {
+  const z = $(id);
+  ['dragenter', 'dragover'].forEach(ev => z.addEventListener(ev, e => { e.preventDefault(); z.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(ev => z.addEventListener(ev, () => z.classList.remove('over')));
+  z.addEventListener('drop', e => { e.preventDefault(); const f = e.dataTransfer && e.dataTransfer.files[0]; if (f) loadFile(which, f); });
+});
 $('csvHMeas').addEventListener('change', () => reparse('meas'));
 $('csvHSim').addEventListener('change', () => reparse('sim'));
 $('btnDemo').addEventListener('click', loadDemo);
@@ -1809,7 +1947,7 @@ $('btnSwap').addEventListener('click', () => {
   [st.meas, st.sim] = [st.sim, st.meas]; [st.raw.meas, st.raw.sim] = [st.raw.sim, st.raw.meas];
   const a = $('mirMeas').checked; $('mirMeas').checked = $('mirSim').checked; $('mirSim').checked = a;
   const b = $('csvHMeas').checked; $('csvHMeas').checked = $('csvHSim').checked; $('csvHSim').checked = b;
-  ['meas', 'sim'].forEach(w => { const el = $(w === 'meas' ? 'infoMeas' : 'infoSim'); el.classList.remove('err'); el.textContent = st[w] ? describe(st[w]) : '–'; el.style.whiteSpace = 'pre-line'; });
+  ['meas', 'sim'].forEach(w => { const el = $(w === 'meas' ? 'infoMeas' : 'infoSim'); el.classList.remove('err'); el.textContent = st[w] ? describe(st[w]) : 'IES, LDT or CSV · or drop it here'; el.style.whiteSpace = 'pre-line'; });
   st.fitCache = null; schedule();
 });
 ['hmin','hmax','vmin','vmax','step','mirMeas','mirSim','alignMode','dh','dv','fitRange','scaleMode','k','maskPct','tolPct'].forEach(id => $(id).addEventListener('change', schedule));
@@ -1817,7 +1955,7 @@ document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () =>
 $('tpPreset').addEventListener('change', () => { const key = $('tpPreset').value === 'func' ? FUNCS[st.func].pts : 'custom'; setPoints((BC.PRESETS[key] || []).map(p => Object.assign({}, p))); schedule(); });
 $('func').addEventListener('change', () => applyFunction($('func').value, true));
 $('tpApply').addEventListener('click', applyPointsJson);
-$('exPts').addEventListener('click', () => { if (st.res) saveFile(`test_points_${stamp()}.csv`, pointsCSV()); });
+$('exPts').addEventListener('click', () => { if (st.res) saveFile(`beam_correlate_results_${stamp()}.csv`, pointsCSV()); });
 $('exGrid').addEventListener('click', () => { if (st.res) saveFile(`ratio_grid_${stamp()}.csv`, gridCSV()); });
 $('exReport').addEventListener('click', async () => {
   if (!st.res) return; const b = $('exReport'); b.disabled = true; b.textContent = 'Building report…';
