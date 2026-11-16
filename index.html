@@ -1,9 +1,9 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<style>html{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<style>html{color-scheme:light}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 <title>beamCorrelate</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,6 +15,7 @@
   --meas:#B4530B; --sim:#3B57C4; --good:#22774A; --bad:#B42318; --warn:#9A5B00;
   --good-bg:#E3F2E8; --bad-bg:#FBE7E5; --warn-bg:#FBF0DA;
   --div-mid:#F4F2EC; --div-neg:#2F5FB0; --div-pos:#C2410C;
+  --gam-0:#E4F1EA; --gam-1:#3D8F63; --gam-2:#E9A23B; --gam-3:#B42318;
   --f-display:"IBM Plex Sans Condensed","Arial Narrow",system-ui,sans-serif;
   --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
@@ -24,12 +25,14 @@
   --bg:#121518; --panel:#1A1E22; --sunk:#22272C; --ink:#E5E8EA; --ink-2:#9AA5AF; --line:#2E353B;
   --meas:#EE9640; --sim:#8FA3F5; --good:#5CC48A; --bad:#F2766B; --warn:#E2B04A;
   --good-bg:#18301F; --bad-bg:#3A1C1A; --warn-bg:#3A2D12;
-  --div-mid:#24282D; --div-neg:#6F9BEA; --div-pos:#F08A4B; color-scheme:dark}}
+  --div-mid:#24282D; --div-neg:#6F9BEA; --div-pos:#F08A4B;
+  --gam-0:#1D2B24; --gam-1:#4FAE7C; --gam-2:#D9A441; --gam-3:#F2766B; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#121518; --panel:#1A1E22; --sunk:#22272C; --ink:#E5E8EA; --ink-2:#9AA5AF; --line:#2E353B;
   --meas:#EE9640; --sim:#8FA3F5; --good:#5CC48A; --bad:#F2766B; --warn:#E2B04A;
   --good-bg:#18301F; --bad-bg:#3A1C1A; --warn-bg:#3A2D12;
-  --div-mid:#24282D; --div-neg:#6F9BEA; --div-pos:#F08A4B; color-scheme:dark}
+  --div-mid:#24282D; --div-neg:#6F9BEA; --div-pos:#F08A4B;
+  --gam-0:#1D2B24; --gam-1:#4FAE7C; --gam-2:#D9A441; --gam-3:#F2766B; color-scheme:dark}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.5}
 .wrap{max-width:1500px;margin:0 auto;padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
@@ -73,6 +76,7 @@ button:disabled{opacity:.55;cursor:default}
 .main{display:flex;flex-direction:column;gap:14px;min-width:0}
 .kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
 .kpi{background:var(--panel);padding:10px 12px;min-width:0;box-shadow:1px 0 0 var(--line),0 1px 0 var(--line)}
+.kpi .k .nc{text-transform:none}
 .kpi .k{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
 .kpi .v{font-family:var(--f-mono);font-size:18px;font-weight:500;font-variant-numeric:tabular-nums;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .kpi .d{font-size:12px;color:var(--ink-2);font-variant-numeric:tabular-nums}
@@ -110,6 +114,13 @@ details summary{cursor:pointer;font-size:13px;color:var(--ink-2)}
 footer{margin-top:26px;padding-top:14px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-2);display:grid;gap:6px}
 footer p{margin:0;max-width:110ch}
 .code{font-family:var(--f-mono);font-size:12px}
+#viewExtra{display:flex;flex-direction:column;gap:10px}
+#viewExtra .busyline{font-size:13px;color:var(--warn)}
+#viewExtra .interp{font-size:13px;color:var(--ink-2);max-width:110ch;margin:0}
+#viewExtra .interp strong{color:var(--ink)}
+.det{font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px;white-space:nowrap}
+.det.good{background:var(--good-bg);color:var(--good)} .det.warn{background:var(--warn-bg);color:var(--warn)} .det.bad{background:var(--sunk);color:var(--ink-2)}
+td.lft,th.lft{text-align:left}
 #viewExtra:empty{display:none}
 #viewExtra .warnline{font-size:12px;color:var(--warn);background:var(--warn-bg);border-radius:6px;padding:6px 10px;margin:0 0 8px}
 .viewbar input[type=text]{font-family:var(--f-mono);font-size:13px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);min-width:0}
@@ -231,6 +242,8 @@ footer p{margin:0;max-width:110ch}
           <button class="tab" role="tab" data-view="overlay" aria-selected="false">Contour overlay</button>
           <button class="tab" role="tab" data-view="slices" aria-selected="false">Slices</button>
           <button class="tab" role="tab" data-view="cutoff" aria-selected="false" id="tabCut">Cut-off</button>
+          <button class="tab" role="tab" data-view="gamma" aria-selected="false">Gamma</button>
+          <button class="tab" role="tab" data-view="calib" aria-selected="false">Calibration</button>
         </div>
         <div class="viewbar" id="viewbar"></div>
       </div>
@@ -257,6 +270,9 @@ footer p{margin:0;max-width:110ch}
     <p><strong>CSV.</strong> Matrix layout with H angles across the first row and V angles down the first column (tick "CSV rows are H" if transposed), or three columns H, V, cd. Comma, semicolon or tab separated.</p>
     <p><strong>Ratio.</strong> Measured / simulated, on a log₂ colour scale so ×2 and ×0.5 look equally far from ×1. RMS deviation and the tolerance band are computed on unmasked cells only.</p>
     <p><strong>Cut-off.</strong> Vertical scans in 0.05° steps on log-interpolated data. Sharpness G = log₁₀ I(β) − log₁₀ I(β+0.1°), taken at its maximum. The cut-off position β is the centre of the gradient peak (inflection of log I). Linearity is the spread of β across the scan positions. The elbow is where a straight-line fit of the rising shoulder meets the horizontal part, and the shoulder angle comes from that fit. G is only as good as the data resolution near the cut-off.</p>
+    <p><strong>Gamma.</strong> For each measured cell above the threshold, γ = min √(|Δr|²/DTA² + ΔI²/ΔI<sub>tol</sub>²) over nearby simulated positions, searched to 2·DTA (so γ is capped at 2). γ ≤ 1 passes: the simulation matches either in value or within the distance-to-agreement. ΔI<sub>tol</sub> is a share of the local measured value (local) or of measured Imax (global). The plain-ratio pass rate is shown beside it; the gap between them is error that is only a small position shift.</p>
+    <p><strong>Contours.</strong> For each iso level, distances in degrees from every point of one contour to the nearest point of the other, both ways: mean, 95th percentile and maximum (Hausdorff). The signed shift is positive where the simulated line lies outside the measured one. Extents are the furthest cells at or above the level; * marks a window edge.</p>
+    <p><strong>Calibration.</strong> Fits I<sub>cal</sub> = a·(G<sub>σH,σV</sub> ∗ I<sub>sim</sub>)(H−δH, V−δV) + halo + floor, where G is a Gaussian blur, the halo is the simulation blurred by 5° and the floor is uniform. Aim (δ), blur and the linear terms are fitted together because blur moves the apparent centre of an asymmetric beam. Each σ is labelled by how much the fit worsens when it is halved or raised by half: a beam without sharp features in one direction cannot determine σ in that direction.</p>
     <p>beamCorrelate · © 2026 Jalib Akther</p>
   </footer>
 </div>
@@ -538,10 +554,17 @@ function demoBeam(o){
 function demoPair(kind, amp){
   kind = kind || 'low';
   const tag = kind.toUpperCase();
-  return {
-    meas: demoBeam({ kind, amp, name:`demo_measured_${tag}.csv`, shiftH:0.15, shiftV:-0.08, eff:0.88, edge:0.085, hotW:1.08, noise:0.015, seed:7, step:0.1, stray:60 }),
-    sim: demoBeam({ kind, amp, name:`demo_simulated_${tag}.ies`, step:0.1 })
-  };
+  // "Measured" = the simulated design, aimed 0.15°R 0.08°D, 88% efficient, softened by source size and
+  // surface scatter (Gaussian blur), plus a broad stray-light floor and 1.5% measurement noise.
+  const raw = demoBeam({ kind, amp, name:`demo_measured_${tag}.csv`, shiftH:0.15, shiftV:-0.08, eff:0.88, step:0.1 });
+  const step = 0.1, H = convH(raw.Z, gaussKernel(0.22, step)), kv = gaussKernel(0.07, step);
+  let mx = 0; raw.Z.forEach(r => r.forEach(x => { if (x > mx) mx = x; }));
+  const rnd = mulberry32(7);
+  const Z = raw.vs.map((v, j) => Float64Array.from(raw.hs, (h, i) =>
+    (convVAt(H, kv, j, i) + 0.0018*mx*Math.exp(-((h/35)**2) - ((v + 2)/12)**2))*(1 + 0.015*(rnd()*2 - 1))));
+  const meas = makeHV(raw.name, 'demo', raw.hs, raw.vs, Z, {});
+  meas.typeLabel = raw.typeLabel;
+  return { meas, sim: demoBeam({ kind, amp, name:`demo_simulated_${tag}.ies`, step }) };
 }
 
 /* ---------- Comparison ---------- */
@@ -771,6 +794,259 @@ function contourSegs(xs, ys, Z, L){
   return { x: X, y: Y };
 }
 
+/* ---------- Uniform-grid samplers ---------- */
+function gridSampler(xs, ys, Z, logInterp){
+  const x0 = xs[0], y0 = ys[0], dx = xs[1] - xs[0], dy = ys[1] - ys[0], nx = xs.length, ny = ys.length;
+  return (x, y) => {
+    const fx = (x - x0)/dx, fy = (y - y0)/dy;
+    if (!(fx >= -1e-9 && fy >= -1e-9 && fx <= nx - 1 + 1e-9 && fy <= ny - 1 + 1e-9)) return NaN;
+    let i = Math.floor(fx), j = Math.floor(fy); if (i > nx - 2) i = nx - 2; if (j > ny - 2) j = ny - 2; if (i < 0) i = 0; if (j < 0) j = 0;
+    const tx = fx - i, ty = fy - j, r0 = Z[j], r1 = Z[j+1];
+    const a = r0[i], b = r0[i+1], c = r1[i], d = r1[i+1];
+    if (logInterp && a > 0 && b > 0 && c > 0 && d > 0)
+      return Math.exp((Math.log(a)*(1-tx) + Math.log(b)*tx)*(1-ty) + (Math.log(c)*(1-tx) + Math.log(d)*tx)*ty);
+    return (a*(1-tx) + b*tx)*(1-ty) + (c*(1-tx) + d*tx)*ty;
+  };
+}
+
+/* ---------- Gamma index ----------
+   For each measured cell above the threshold: γ = min over simulated positions r' of
+   sqrt(|r − r'|²/DTA² + (I_sim(r') − I_meas(r))²/ΔI²). ΔI is a fraction of the local measured value
+   (local) or of measured Imax (global). γ ≤ 1 passes. Search radius 2·DTA, so γ is capped at 2. */
+function gammaIndex(res, o){
+  const { hs, vs, M, S, step } = res, nx = hs.length, ny = vs.length;
+  const sS = gridSampler(hs, vs, S);
+  const dta = Math.max(0.01, o.dta), dI = Math.max(0.001, o.dIPct/100);
+  const ds = Math.min(step, dta/3), R = 2*dta, n = Math.ceil(R/ds), cap2 = 4;
+  const offs = [];
+  for (let a = -n; a <= n; a++) for (let b = -n; b <= n; b++){
+    const ox = a*ds, oy = b*ds, r2 = (ox*ox + oy*oy)/(dta*dta);
+    if (r2 <= cap2 + 1e-9) offs.push([ox, oy, r2]);
+  }
+  offs.sort((p, q) => p[2] - q[2]);
+  const thr = (o.thrPct/100)*res.Mmax, gDen = dI*res.Mmax;
+  const G = vs.map(() => new Float64Array(nx).fill(NaN));
+  const bands = [
+    { name:'≥ 50% Imax', lo:0.5, hi:Infinity, n:0, pass:0, rpass:0 },
+    { name:'10–50% Imax', lo:0.1, hi:0.5, n:0, pass:0, rpass:0 },
+    { name:'1–10% Imax', lo:0.01, hi:0.1, n:0, pass:0, rpass:0 },
+    { name:'< 1% Imax', lo:0, hi:0.01, n:0, pass:0, rpass:0 }
+  ];
+  let cnt = 0, pass = 0, rpass = 0, sum = 0; const all = [];
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++){
+    const m = M[j][i]; if (!(m >= thr) || !(m > 0)) continue;
+    const h = hs[i], v = vs[j], den = o.norm === 'global' ? gDen : dI*m;
+    let best = Infinity;
+    for (let k = 0; k < offs.length; k++){
+      const off = offs[k]; if (off[2] >= best) break;
+      const s = sS(h + off[0], v + off[1]); if (!Number.isFinite(s)) continue;
+      const d = (s - m)/den, g2 = off[2] + d*d; if (g2 < best) best = g2;
+    }
+    if (best === Infinity) continue;
+    const g = Math.min(2, Math.sqrt(best)); G[j][i] = g;
+    const s0 = S[j][i], rp = Number.isFinite(s0) && Math.abs(s0 - m) <= den;
+    cnt++; sum += g; all.push(g); if (g <= 1) pass++; if (rp) rpass++;
+    const rel = m/res.Mmax; for (const b of bands) if (rel >= b.lo && rel < b.hi){ b.n++; if (g <= 1) b.pass++; if (rp) b.rpass++; break; }
+  }
+  all.sort((a, b) => a - b);
+  return { G, n: cnt, pass: cnt ? pass/cnt : NaN, ratioPass: cnt ? rpass/cnt : NaN, mean: cnt ? sum/cnt : NaN, p95: cnt ? all[Math.min(cnt - 1, Math.floor(0.95*cnt))] : NaN,
+    bands: bands.filter(b => b.n > 0), opts: Object.assign({}, o) };
+}
+
+/* ---------- Isocandela contour displacement ---------- */
+function nnIndex(px, py, cs){
+  const map = new Map(), key = (a, b) => a*131071 + b;
+  for (let i = 0; i < px.length; i++){
+    const k = key(Math.floor(px[i]/cs), Math.floor(py[i]/cs));
+    let arr = map.get(k); if (!arr){ arr = []; map.set(k, arr); } arr.push(i);
+  }
+  return (x, y) => {
+    const cx = Math.floor(x/cs), cy = Math.floor(y/cs); let best = Infinity;
+    for (let r = 0; r < 400; r++){
+      for (let a = -r; a <= r; a++) for (let b = -r; b <= r; b++){
+        if (Math.max(Math.abs(a), Math.abs(b)) !== r) continue;
+        const arr = map.get(key(cx + a, cy + b)); if (!arr) continue;
+        for (const i of arr){ const dx = px[i] - x, dy = py[i] - y, d2 = dx*dx + dy*dy; if (d2 < best) best = d2; }
+      }
+      if (best <= (r*cs)*(r*cs)) break;
+    }
+    return Math.sqrt(best);
+  };
+}
+function contourPoints(seg){
+  const px = [], py = [];
+  for (let k = 0; k < seg.x.length; k++) if (seg.x[k] != null){ px.push(seg.x[k]); py.push(seg.y[k]); }
+  return { px, py };
+}
+function regionStats(hs, vs, Z, L, win, step){
+  let n = 0, area = 0, h0 = Infinity, h1 = -Infinity, v0 = Infinity, v1 = -Infinity;
+  for (let j = 0; j < vs.length; j++){ const w = Math.cos(vs[j]*DEG);
+    for (let i = 0; i < hs.length; i++) if (Z[j][i] >= L){ n++; area += w;
+      if (hs[i] < h0) h0 = hs[i]; if (hs[i] > h1) h1 = hs[i]; if (vs[j] < v0) v0 = vs[j]; if (vs[j] > v1) v1 = vs[j]; } }
+  const e = step/2;
+  return { n, area, left:h0, right:h1, down:v0, up:v1,
+    edge:{ left: h0 <= win.hmin + e, right: h1 >= win.hmax - e, down: v0 <= win.vmin + e, up: v1 >= win.vmax - e } };
+}
+function contourDisplacement(res, levels){
+  const { hs, vs, M, S, win, step } = res, sS = gridSampler(hs, vs, S);
+  return levels.map(L => {
+    const rm = regionStats(hs, vs, M, L, win, step), rs = regionStats(hs, vs, S, L, win, step);
+    const a = contourPoints(contourSegs(hs, vs, M, L)), b = contourPoints(contourSegs(hs, vs, S, L));
+    const out = { L, rm, rs, areaRatio: rm.area > 0 ? rs.area/rm.area : NaN, ok:false };
+    if (a.px.length < 2 || b.px.length < 2) return out;
+    const qb = nnIndex(b.px, b.py, 0.5), qa = nnIndex(a.px, a.py, 0.5);
+    const d = []; let sgn = 0, sgnN = 0;
+    for (let k = 0; k < a.px.length; k++){
+      const dist = qb(a.px[k], a.py[k]); d.push(dist);
+      const s = sS(a.px[k], a.py[k]); if (Number.isFinite(s)){ sgn += (s >= L ? 1 : -1)*dist; sgnN++; }
+    }
+    for (let k = 0; k < b.px.length; k++) d.push(qa(b.px[k], b.py[k]));
+    d.sort((x, y) => x - y);
+    out.ok = true; out.mean = d.reduce((x, y) => x + y, 0)/d.length;
+    out.p95 = d[Math.min(d.length - 1, Math.floor(0.95*d.length))]; out.max = d[d.length - 1];
+    out.signed = sgnN ? sgn/sgnN : NaN;
+    return out;
+  });
+}
+
+/* ---------- Blur and stray-light calibration ----------
+   Model: I_cal = a·(G_σH,σV ∗ I_sim) + h·Halo + f·Imax_sim, where G is a separable Gaussian in H and V,
+   Halo is the simulation blurred by a wide 5° Gaussian (scatter from lens haze, housing, dust) scaled to
+   peak at Imax_sim, and f is a uniform floor. For each σ pair, a, h and f (h, f ≥ 0) are solved by least
+   squares on relative error over cells above 0.2% of measured Imax; σH and σV come from a coarse scan
+   followed by golden-section search. */
+function gaussKernel(sigma, step){
+  if (!(sigma > 0.01)) return [1];
+  const r = Math.max(1, Math.ceil(3*sigma/step)), k = [];
+  let s = 0; for (let i = -r; i <= r; i++){ const w = Math.exp(-0.5*(i*step/sigma)**2); k.push(w); s += w; }
+  return k.map(w => w/s);
+}
+function convH(Z, k){
+  const r = (k.length - 1)/2;
+  return Z.map(row => { const nx = row.length, out = new Float64Array(nx);
+    for (let i = 0; i < nx; i++){ let s = 0, w = 0;
+      for (let t = -r; t <= r; t++){ const x = row[i + t]; if (x === undefined || !Number.isFinite(x)) continue; const kk = k[t + r]; s += kk*x; w += kk; }
+      out[i] = w > 0 ? s/w : NaN; }
+    return out; });
+}
+function convVAt(Hz, k, j, i){
+  const r = (k.length - 1)/2, ny = Hz.length; let s = 0, w = 0;
+  for (let t = -r; t <= r; t++){ const jj = j + t; if (jj < 0 || jj >= ny) continue; const x = Hz[jj][i]; if (!Number.isFinite(x)) continue; const kk = k[t + r]; s += kk*x; w += kk; }
+  return w > 0 ? s/w : NaN;
+}
+function logStats(M, C, thr, tolFrac){
+  let n = 0, s = 0, s2 = 0, inTol = 0;
+  for (let j = 0; j < M.length; j++) for (let i = 0; i < M[j].length; i++){
+    const m = M[j][i], c = C[j][i];
+    if (!(m > 0 && c > 0) || Math.max(m, c) < thr) continue;
+    const l = Math.log2(m/c); n++; s += l; s2 += l*l; if (Math.abs(m/c - 1) <= tolFrac) inTol++;
+  }
+  return { n, rms: n ? Math.pow(2, Math.sqrt(s2/n)) - 1 : NaN, bias: n ? Math.pow(2, s/n) - 1 : NaN, inTol: n ? inTol/n : NaN };
+}
+function blur2D(Z, step, sh, sv){
+  const H = convH(Z, gaussKernel(sh, step)), kv = gaussKernel(sv, step);
+  return Z.map((row, j) => Float64Array.from(row, (x, i) => convVAt(H, kv, j, i)));
+}
+function solveSPD(A, b){ // small Gaussian elimination
+  const n = b.length, M = A.map((r, i) => r.concat([b[i]]));
+  for (let c = 0; c < n; c++){
+    let p = c; for (let r = c + 1; r < n; r++) if (Math.abs(M[r][c]) > Math.abs(M[p][c])) p = r;
+    if (Math.abs(M[p][c]) < 1e-300) return null; [M[c], M[p]] = [M[p], M[c]];
+    for (let r = 0; r < n; r++) if (r !== c){ const f = M[r][c]/M[c][c]; for (let k = c; k <= n; k++) M[r][k] -= f*M[c][k]; }
+  }
+  return M.map((r, i) => r[n]/r[i]);
+}
+function calibrationFit(res, o){
+  const { hs, vs, M, S, step } = res, ny = vs.length, nx = hs.length;
+  const fitThr = 0.002*res.Mmax, Smax = res.Smax;
+  let idx = [];
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++){ const m = M[j][i]; if (m >= fitThr && Number.isFinite(S[j][i])) idx.push(j*nx + i); }
+  if (idx.length < 50) throw new Error('Too few lit cells to fit blur and stray light.');
+  if (idx.length > 25000){ const st = Math.ceil(idx.length/25000); idx = idx.filter((_, k) => k % st === 0); }
+  // wide halo basis, computed on a coarse grid for speed and interpolated back
+  const cStep = Math.max(step, 0.5), ci = Math.max(1, Math.round(cStep/step));
+  const hsC = [], vsC = []; for (let i = 0; i < nx; i += ci) hsC.push(hs[i]); for (let j = 0; j < ny; j += ci) vsC.push(vs[j]);
+  const SC = vsC.map((v, jj) => Float64Array.from(hsC, (h, ii) => { const x = S[jj*ci][ii*ci]; return Number.isFinite(x) ? x : NaN; }));
+  const WC = blur2D(SC, step*ci, 5, 5); let wmax = 0; WC.forEach(r => r.forEach(x => { if (x > wmax) wmax = x; }));
+  const wS = gridSampler(hsC, vsC, WC);
+  const W = vs.map(v => Float64Array.from(hs, h => { const x = wS(Math.min(h, hsC[hsC.length-1]), Math.min(v, vsC[vsC.length-1])); return Number.isFinite(x) && wmax > 0 ? x*Smax/wmax : 0; }));
+  const sigMax = Math.min(1.5, Math.max(0.3, 15*step));
+  const q = s => Math.round(Math.max(0, Math.min(sigMax, s))*1000)/1000, qo = x => Math.round(x*1000)/1000;
+  const hCache = new Map(), bCache = new Map(), memo = new Map();
+  const getB = (sh, sv) => {
+    const key = sh + '|' + sv; let B = bCache.get(key); if (B) return B;
+    let H = hCache.get(sh); if (!H){ H = convH(S, gaussKernel(sh, step)); hCache.set(sh, H); }
+    const kv = gaussKernel(sv, step);
+    B = { Z: vs.map((v, j) => Float64Array.from(hs, (h, i) => convVAt(H, kv, j, i))) };
+    B.f = gridSampler(hs, vs, B.Z); bCache.set(key, B); return B;
+  };
+  const cH = idx.map(k => hs[k % nx]), cV = idx.map(k => vs[(k/nx)|0]), cM = idx.map(k => M[(k/nx)|0][k % nx]), cW = idx.map(k => W[(k/nx)|0][k % nx]);
+  const subsets = [[0, 1, 2], [0, 1], [0, 2], [0]];
+  const evalAt = (sh, sv, ox, oy) => {
+    sh = q(sh); sv = q(sv); ox = qo(ox); oy = qo(oy);
+    const key = sh + '|' + sv + '|' + ox + '|' + oy; if (memo.has(key)) return memo.get(key);
+    const Bf = getB(sh, sv).f;
+    const A = [[0,0,0],[0,0,0],[0,0,0]], bv = [0,0,0]; let n = 0;
+    for (let k = 0; k < idx.length; k++){
+      const B = Bf(cH[k] - ox, cV[k] - oy); if (!Number.isFinite(B)) continue;
+      const m = cM[k], x0 = B/m, x1 = cW[k]/m, x2 = Smax/m; n++;
+      bv[0] += x0; bv[1] += x1; bv[2] += x2;
+      A[0][0] += x0*x0; A[0][1] += x0*x1; A[0][2] += x0*x2; A[1][1] += x1*x1; A[1][2] += x1*x2; A[2][2] += x2*x2;
+    }
+    A[1][0] = A[0][1]; A[2][0] = A[0][2]; A[2][1] = A[1][2];
+    let best = null;
+    for (const sub of subsets){
+      const sol = solveSPD(sub.map(p => sub.map(r => A[p][r])), sub.map(p => bv[p])); if (!sol) continue;
+      if (sol.some((v, t) => t > 0 && v < 0) || !(sol[0] > 0)) continue;
+      const beta = [0, 0, 0]; sub.forEach((p, t) => beta[p] = sol[t]);
+      let c = n; for (let p = 0; p < 3; p++){ c -= 2*beta[p]*bv[p]; for (let r = 0; r < 3; r++) c += beta[p]*A[p][r]*beta[r]; }
+      if (!best || c < best.c) best = { beta, c };
+    }
+    const r = { sh, sv, ox, oy, a: best ? best.beta[0] : 1, hHalo: best ? best.beta[1] : 0, f: best ? best.beta[2] : 0,
+      cost: best && n > idx.length*0.8 ? Math.max(0, best.c)/n : Infinity };
+    memo.set(key, r); return r;
+  };
+  const golden = (fn, lo, hi, tol) => {
+    const g = 0.6180339887; let x1 = hi - g*(hi - lo), x2 = lo + g*(hi - lo), f1 = fn(x1), f2 = fn(x2);
+    for (let it = 0; it < 16 && hi - lo > (tol || 0.004); it++){
+      if (f1 < f2){ hi = x2; x2 = x1; f2 = f1; x1 = hi - g*(hi - lo); f1 = fn(x1); }
+      else { lo = x1; x1 = x2; f1 = f2; x2 = lo + g*(hi - lo); f2 = fn(x2); }
+    }
+    return f1 < f2 ? x1 : x2;
+  };
+  const oR = (o && o.offsetRange != null) ? o.offsetRange : 0.3;
+  const base = evalAt(0, 0, 0, 0);
+  let best = base;
+  [0.03, 0.06, 0.1, 0.15, 0.2, 0.3, 0.45, 0.65, 0.9, 1.2].filter(s => s <= sigMax).forEach(s => { const r = evalAt(s, s, 0, 0); if (r.cost < best.cost) best = r; });
+  let { sh, sv, ox, oy } = best;
+  for (let round = 0; round < 3; round++){
+    const w = round === 0 ? 0.6 : round === 1 ? 0.25 : 0.1;
+    if (oR > 0){
+      ox = golden(x => evalAt(sh, sv, x, oy).cost, -oR, oR, 0.003);
+      oy = golden(x => evalAt(sh, sv, ox, x).cost, -oR, oR, 0.003);
+    }
+    sv = golden(x => evalAt(sh, x, ox, oy).cost, Math.max(0, sv - w), Math.min(sigMax, sv + w));
+    sh = golden(x => evalAt(x, sv, ox, oy).cost, Math.max(0, sh - w), Math.min(sigMax, sh + w));
+  }
+  best = [evalAt(sh, sv, ox, oy), best, base].sort((p, r) => p.cost - r.cost)[0];
+  // identifiability: relative cost rise when each σ is halved or raised by 50%
+  const rise = (which) => {
+    const s0 = best[which], alt = [s0*0.5, s0*1.5 + 0.02].filter(x => Math.abs(x - s0) > 0.005);
+    const cs = alt.map(x => (which === 'sh' ? evalAt(x, best.sv, best.ox, best.oy) : evalAt(best.sh, x, best.ox, best.oy)).cost);
+    return cs.length ? Math.min(...cs)/best.cost - 1 : NaN;
+  };
+  const riseH = rise('sh'), riseV = rise('sv');
+  const Bf = getB(best.sh, best.sv).f;
+  const C = vs.map((v, j) => Float64Array.from(hs, (h, i) => { const B = Bf(h - best.ox, v - best.oy); return Number.isFinite(B) ? best.a*B + best.hHalo*W[j][i] + best.f*Smax : NaN; }));
+  const tol = (o && o.tolPct ? o.tolPct : 15)/100;
+  const Rafter = vs.map((v, j) => Float64Array.from(hs, (h, i) => {
+    const m = M[j][i], c = C[j][i]; return (m > 0 && c > 0 && Math.max(m, c) >= res.thr) ? Math.log2(m/c) : NaN; }));
+  return { sh: best.sh, sv: best.sv, ox: best.ox, oy: best.oy, riseH, riseV, a: best.a, f: best.f, hHalo: best.hHalo,
+    floorPct: 100*best.f*Smax/res.Mmax, haloPct: 100*best.hHalo*Smax/res.Mmax,
+    costBefore: base.cost, costAfter: best.cost, C, Rafter,
+    before: logStats(M, S, res.thr, tol), after: logStats(M, C, res.thr, tol), sigMax, evals: memo.size };
+}
+
 const ptName = (h, v) => {
   const hp = h === 0 ? '' : Math.abs(h) + (h > 0 ? 'R' : 'L'), vp = v === 0 ? '' : Math.abs(v) + (v > 0 ? 'U' : 'D');
   return !hp && !vp ? 'HV' : !vp ? hp : !hp ? vp : vp + '-' + hp;
@@ -803,7 +1079,7 @@ const PRESETS = {
   custom: [ { name:'HV', h:0, v:0 } ]
 };
 
-const BC = { DEG, range, bilinear, makeHV, makeC, expandC, parseIES, parseLDT, parseCSV, parseFile, demoPair, demoBeam, compute, slices, contourSegs, cutoffScan, cutoffAnalysis, PRESETS };
+const BC = { DEG, range, bilinear, makeHV, makeC, expandC, parseIES, parseLDT, parseCSV, parseFile, demoPair, demoBeam, compute, slices, contourSegs, cutoffScan, cutoffAnalysis, gridSampler, gammaIndex, contourDisplacement, calibrationFit, PRESETS };
 if (typeof window !== 'undefined') window.BC = BC;
 if (typeof module !== 'undefined') module.exports = BC;
 })();
@@ -836,7 +1112,7 @@ const FUNCS = {
   rfog: { label:'Rear fog lamp', win:[-10, 10, -5, 5], step:0.1, pts:'rfog', demo:['signal', 300], slice:[0, 0], note:'Grid ±10° H, ±5° V, positions only. Add your limits.' },
   rev: { label:'Reversing lamp', win:[-45, 45, -5, 15], step:0.25, pts:'rev', demo:['signal', 250], slice:[0, 0], note:'Grid to ±45° H, positions only. Add your limits.' }
 };
-const st = { func:'lb_rht', meas:null, sim:null, raw:{ meas:null, sim:null }, isDemo:false, view:'ratio', fitCache:null, res:null, cutRes:null, cut:null,
+const st = { gamma:{ dIPct:10, dta:0.2, norm:'local', thrPct:1 }, gRes:null, cdRes:null, calRes:null, calFor:null, calBusy:false, calErr:null, func:'lb_rht', meas:null, sim:null, raw:{ meas:null, sim:null }, isDemo:false, view:'ratio', fitCache:null, res:null, cutRes:null, cut:null,
   points: BC.PRESETS.lb_rht.slice(), ratioSpan:1, sliceH:2.5, sliceV:-0.86, logY:true, isoLevels:'' };
 const hasPlotly = typeof window.Plotly !== 'undefined';
 let dlCap = null;
@@ -946,13 +1222,41 @@ function run(){
       if (o.alignMode !== 'manual'){ $('dh').value = res.dh.toFixed(3); $('dv').value = res.dv.toFixed(3); }
       if (o.scaleMode !== 'manual') $('k').value = res.k.toFixed(4);
       $('alignNote').textContent = `Simulation shifted ${fmtShift(res.dh, res.dv)} and scaled ×${res.k.toFixed(3)}.` + (res.fit && !res.fit.ok ? ' Best fit did not converge; check the window or mask.' : '');
-      recomputeCut();
+      recomputeCut(); recomputeGamma(); recomputeContours();
+      st.calRes = null; st.calFor = null; st.calErr = null;
       renderKPIs(); renderView(); renderTable();
     } catch (e){
       st.res = null; $('alignNote').textContent = ''; renderEmpty(e.message);
     }
   }, needsFit ? 30 : 0);
 }
+
+function recomputeGamma(){
+  st.gRes = null; if (!st.res) return;
+  try { st.gRes = BC.gammaIndex(st.res, st.gamma); } catch (e){ st.gRes = null; }
+  if (st.calRes && st.calFor === st.res) st.calRes.gamma = BC.gammaIndex(Object.assign({}, st.res, { S: st.calRes.C }), st.gamma);
+}
+function recomputeContours(){
+  st.cdRes = null; if (!st.res) return;
+  try { st.cdRes = BC.contourDisplacement(st.res, isoLevels()); } catch (e){ st.cdRes = null; }
+}
+function calibrateNow(){
+  if (st.calRes && st.calFor === st.res) return st.calRes;
+  const res = st.res;
+  const cal = BC.calibrationFit(res, { tolPct: st.opts.tolPct, offsetRange: 0.3 });
+  cal.gamma = BC.gammaIndex(Object.assign({}, res, { S: cal.C }), st.gamma);
+  st.calRes = cal; st.calFor = res; st.calErr = null; return cal;
+}
+function ensureCalibration(){
+  if (!st.res || (st.calRes && st.calFor === st.res) || st.calBusy === st.res || st.calErr) return;
+  const res = st.res; st.calBusy = res;
+  setTimeout(() => {
+    if (st.res === res){ try { calibrateNow(); } catch (e){ st.calErr = e.message; } }
+    if (st.calBusy === res) st.calBusy = false;
+    if (st.res === res){ renderKPIs(); if (st.view === 'calib') renderView(); }
+  }, 60);
+}
+const detLabel = rise => !Number.isFinite(rise) ? ['–', 'bad'] : rise >= 0.03 ? ['well determined', 'good'] : rise >= 0.005 ? ['approximate', 'warn'] : ['not determined by this data', 'bad'];
 
 /* ---------- KPIs ---------- */
 function renderKPIs(){
@@ -964,12 +1268,12 @@ function renderKPIs(){
   const items = [
     ['Offset applied', fmtShift(r.dh, r.dv), o.alignMode === 'none' ? 'no alignment' : o.alignMode === 'fit' ? 'best fit' : o.alignMode === 'imax' ? 'hot-spot centroid' : 'manual', ''],
     ['Scale factor k', '×' + r.k.toFixed(3), o.scaleMode === 'flux' ? `flux in window: meas ÷ sim` : o.scaleMode === 'imax' ? 'Imax meas ÷ sim' : o.scaleMode === 'manual' ? 'manual' : 'absolute values', ''],
-    ['Imax measured', fmtCd(r.Mmax) + ' cd', fmtPos(r.MmaxAt[0], r.MmaxAt[1]), ''],
-    ['Imax simulated', fmtCd(r.Smax) + ' cd', `${fmtPos(r.SmaxAt[0], r.SmaxAt[1])} · ${fmtPct(imaxD)}`, ''],
+    ['Imax measured', fmtCd(r.Mmax) + ' cd', `sim ${fmtCd(r.Smax)} cd (${fmtPct(-imaxD/(1 + imaxD))}) · at ${fmtPos(r.MmaxAt[0], r.MmaxAt[1])}`, ''],
     ['Flux in window', `${r.phiM.toFixed(0)} / ${r.phiS0.toFixed(0)} lm`, `measured / raw sim · ${fmtPct(r.phiM/r.phiS0 - 1)}`, ''],
     ['RMS deviation', '±' + (rmsPct*100).toFixed(1) + '%', `bias ${fmtPct(biasPct)} · ${r.n.toLocaleString('en-US')} cells`, cls(rmsPct*100, tol, 2*tol)],
     [`Within ±${tol}%`, (r.inTol*100).toFixed(1) + '%', 'of unmasked cells', cls(100 - r.inTol*100, 30, 60)],
     ['Correlation r', Number.isFinite(r.r) ? r.r.toFixed(4) : '–', 'log₁₀ intensities', cls(1 - r.r, 0.01, 0.05)],
+    gTile(), cdTile(), calTile(),
     ['Points passing', judged ? `${cnt('m')} / ${cnt('s')} of ${judged}` : '–', 'measured / simulated', judged && (cnt('m') < judged) ? 'bad' : judged ? 'good' : '']
   ];
   const cr = st.cutRes;
@@ -981,6 +1285,22 @@ function renderKPIs(){
   }
   $('kpis').innerHTML = items.map(([k, v, d, c]) => `<div class="kpi"><div class="k">${k}</div><div class="v ${c}">${v}</div><div class="d">${d}</div></div>`).join('');
 }
+function gTile(){
+  const g = st.gRes, o = st.gamma;
+  if (!g || !g.n) return ['Gamma pass rate', '–', 'no cells above threshold', ''];
+  return ['Gamma pass rate', (g.pass*100).toFixed(1) + '%', `${o.dIPct}% / ${o.dta}° ${o.norm} · ratio alone ${(g.ratioPass*100).toFixed(1)}%`, g.pass >= 0.95 ? 'good' : g.pass >= 0.9 ? 'warn' : 'bad'];
+}
+function cdTile(){
+  const ok = (st.cdRes || []).filter(c => c.ok);
+  if (!ok.length) return ['Contour shift', '–', 'no matching iso levels', ''];
+  const mean = ok.reduce((a, c) => a + c.mean, 0)/ok.length, mx = Math.max(...ok.map(c => c.max));
+  return ['Contour shift', mean.toFixed(3) + '°', `mean of ${ok.length} iso levels · max ${mx.toFixed(2)}°`, mean <= 0.1 ? 'good' : mean <= 0.25 ? 'warn' : 'bad'];
+}
+function calTile(){
+  const c = st.calRes && st.calFor === st.res ? st.calRes : null;
+  if (!c) return ['Blur <span class="nc">σ</span> H / V', '–', st.calBusy === st.res ? 'fitting…' : st.calErr ? 'fit failed' : 'fitted in the Calibration tab', ''];
+  return ['Blur <span class="nc">σ</span> H / V', `${c.sh.toFixed(2)}° / ${c.sv.toFixed(2)}°`, `stray ${(c.haloPct + c.floorPct).toFixed(2)}% Imax · RMS ±${(c.after.rms*100).toFixed(1)}% after`, ''];
+}
 function renderEmpty(msg){
   $('kpis').innerHTML = `<div class="kpi" style="grid-column:1/-1"><div class="k">Status</div><div class="d" style="font-size:14px;color:var(--ink)">${msg ? msg : 'Load a measured and a simulated file, or the demo pair, to start.'}</div></div>`;
   $('plots').innerHTML = ''; $('plotNote').textContent = ''; $('tpTable').innerHTML = ''; $('viewExtra').innerHTML = '';
@@ -988,8 +1308,8 @@ function renderEmpty(msg){
 
 /* ---------- plots ---------- */
 function themeColors(forReport){
-  if (forReport) return { ink:'#1B2025', ink2:'#56616B', line:'#D6DBDD', panel:'#FFFFFF', meas:'#B4530B', sim:'#3B57C4', mid:'#F4F2EC', neg:'#2F5FB0', pos:'#C2410C' };
-  return { ink:tok('--ink'), ink2:tok('--ink-2'), line:tok('--line'), panel:tok('--panel'), meas:tok('--meas'), sim:tok('--sim'), mid:tok('--div-mid'), neg:tok('--div-neg'), pos:tok('--div-pos') };
+  if (forReport) return { ink:'#1B2025', ink2:'#56616B', line:'#D6DBDD', panel:'#FFFFFF', meas:'#B4530B', sim:'#3B57C4', mid:'#F4F2EC', neg:'#2F5FB0', pos:'#C2410C', g0:'#E4F1EA', g1:'#3D8F63', g2:'#E9A23B', g3:'#B42318', cal:'#22774A' };
+  return { ink:tok('--ink'), ink2:tok('--ink-2'), line:tok('--line'), panel:tok('--panel'), meas:tok('--meas'), sim:tok('--sim'), mid:tok('--div-mid'), neg:tok('--div-neg'), pos:tok('--div-pos'), g0:tok('--gam-0'), g1:tok('--gam-1'), g2:tok('--gam-2'), g3:tok('--gam-3'), cal:tok('--good') };
 }
 function baseLayout(c, extra){
   return Object.assign({
@@ -1022,19 +1342,19 @@ function isoLevels(){
 }
 function levelColor(i, n){ const t = n <= 1 ? 0.5 : i/(n-1); const stops = FALSE_COLOR; let k = 0; while (k < stops.length-2 && t > stops[k+1][0]) k++; return stops[k+1][1]; }
 
-function figRatio(c){
-  const r = st.res, span = st.ratioSpan;
-  const cust = r.M.map((row, j) => Array.from(row, (m, i) => [m, r.S[j][i]]));
+function figRatio(c, R, Sg, title){
+  const r = st.res, span = st.ratioSpan; R = R || r.R; Sg = Sg || r.S;
+  const cust = r.M.map((row, j) => Array.from(row, (m, i) => [m, Sg[j][i]]));
   const lev = isoLevels();
-  const data = [{ type:'heatmap', x:r.hs, y:r.vs, z:nullify(r.R), zmin:-span, zmax:span, zsmooth:false,
+  const data = [{ type:'heatmap', x:r.hs, y:r.vs, z:nullify(R), zmin:-span, zmax:span, zsmooth:false,
       colorscale:[[0,c.neg],[0.5,c.mid],[1,c.pos]], customdata:cust,
       hovertemplate:'H %{x:.2f}°  V %{y:.2f}°<br>meas %{customdata[0]:,.0f} cd<br>sim %{customdata[1]:,.0f} cd<br>meas/sim ×%{text}<extra></extra>',
-      text: r.R.map(row => Array.from(row, x => Number.isFinite(x) ? Math.pow(2, x).toFixed(3) : '–')),
+      text: R.map(row => Array.from(row, x => Number.isFinite(x) ? Math.pow(2, x).toFixed(3) : '–')),
       colorbar:{ title:{ text:'meas / sim', side:'right', font:{ size:11, color:c.ink2 } }, thickness:12, outlinewidth:0, tickfont:{ color:c.ink2 },
         tickvals:[-span, -span/2, 0, span/2, span], ticktext:[-span, -span/2, 0, span/2, span].map(x => '×' + (+Math.pow(2, x).toFixed(2))) } }];
   lev.forEach(L => { const s = BC.contourSegs(r.hs, r.vs, r.M, L); data.push({ type:'scatter', mode:'lines', x:s.x, y:s.y, line:{ color:c.ink2, width:0.7 }, hoverinfo:'skip', connectgaps:false }); });
   data.push(pointsTrace(c));
-  return { data, layout: baseLayout(c, { title:{ text:'Measured ÷ simulated (masked below ' + st.opts.maskPct + '% Imax)', font:{ size:13, color:c.ink }, x:0.01, xanchor:'left' } }) };
+  return { data, layout: baseLayout(c, { title:{ text: title || 'Measured ÷ simulated (masked below ' + st.opts.maskPct + '% Imax)', font:{ size:13, color:c.ink }, x:0.01, xanchor:'left' } }) };
 }
 function figIso(c, which){
   const r = st.res, Z = which === 'M' ? r.M : r.S;
@@ -1146,15 +1466,104 @@ function renderCutTable(){
     rows.map(r => `<tr><td>${r[0]}</td><td class="mono">${r[1]}</td><td class="mono">${r[2]}</td><td class="mono">${r[3]}</td><td class="mono">${r[4]}</td><td>${pill(r[5])}</td><td>${pill(r[6])}</td></tr>`).join('') + '</tbody></table></div>';
 }
 
+/* ---------- gamma, contour and calibration views ---------- */
+function isoTraces(c, Z, color){
+  return isoLevels().map(L => { const s = BC.contourSegs(st.res.hs, st.res.vs, Z || st.res.M, L);
+    return { type:'scatter', mode:'lines', x:s.x, y:s.y, line:{ color: color || c.ink2, width:0.7 }, hoverinfo:'skip', connectgaps:false }; });
+}
+function figGamma(c){
+  const r = st.res, g = st.gRes, o = st.gamma;
+  const data = [{ type:'heatmap', x:r.hs, y:r.vs, z:nullify(g.G), zmin:0, zmax:2, zsmooth:false,
+    colorscale:[[0, c.g0], [0.4999, c.g1], [0.5, c.g2], [1, c.g3]],
+    hovertemplate:'H %{x:.2f}°  V %{y:.2f}°<br>γ %{z:.2f}<extra></extra>',
+    colorbar:{ title:{ text:'γ', side:'right', font:{ size:11, color:c.ink2 } }, thickness:12, outlinewidth:0, tickfont:{ color:c.ink2 },
+      tickvals:[0, 0.5, 1, 1.5, 2], ticktext:['0', '0.5', '1', '1.5', '≥ 2'] } }];
+  data.push(...isoTraces(c), pointsTrace(c));
+  return { data, layout: baseLayout(c, { title:{ text:`Gamma ${o.dIPct}% / ${o.dta}° (${o.norm}): ${(g.pass*100).toFixed(1)}% of cells pass`, font:{ size:13, color:c.ink }, x:0.01, xanchor:'left' } }) };
+}
+function gammaTableHTML(){
+  const g = st.gRes; if (!g || !g.n) return '<p class="interp">No measured cells above the gamma threshold.</p>';
+  const pc = x => Number.isFinite(x) ? (x*100).toFixed(1) + '%' : '–';
+  const cls = x => x >= 0.95 ? 'good' : x >= 0.9 ? 'warn' : 'bad';
+  const rows = g.bands.map(b => [b.name, b.n, b.pass/b.n, b.rpass/b.n]);
+  rows.push(['All evaluated cells', g.n, g.pass, g.ratioPass]);
+  const calG = st.calRes && st.calFor === st.res && st.calRes.gamma ? st.calRes.gamma : null;
+  return `<div class="tablewrap"><table><thead><tr><th>Intensity band</th><th>Cells</th><th>Gamma pass</th><th>Ratio-only pass</th><th>Gained by DTA</th></tr></thead><tbody>` +
+    rows.map((r, k) => `<tr><td${k === rows.length - 1 ? ' style="font-weight:600"' : ''}>${r[0]}</td><td class="mono">${r[1].toLocaleString('en-US')}</td><td class="mono dl ${cls(r[2])}">${pc(r[2])}</td><td class="mono">${pc(r[3])}</td><td class="mono">${Number.isFinite(r[2] - r[3]) ? '+' + ((r[2] - r[3])*100).toFixed(1) + ' pts' : '–'}</td></tr>`).join('') +
+    `</tbody></table></div><p class="interp">Mean γ ${g.mean.toFixed(3)}, 95th percentile γ ${g.p95.toFixed(3)}. <strong>Gained by DTA</strong> is the share of cells that fail on value alone but pass once a ${st.gamma.dta}° position tolerance is allowed: error that comes from small shifts in steep gradients, not from wrong intensity.${calG ? ` After calibration (Calibration tab) the gamma pass rate is ${pc(calG.pass)}.` : ''}</p>`;
+}
+const fmtExt = (x, edge, pos, neg) => !Number.isFinite(x) ? '–' : fmtAng(+x.toFixed(2), pos, neg, '0') + (edge ? '*' : '');
+function contourTableHTML(){
+  const cd = st.cdRes || []; if (!cd.length) return '';
+  const sg = x => !Number.isFinite(x) ? '–' : Math.abs(x) < 0.0005 ? '0.000°' : (x > 0 ? '+' : '−') + Math.abs(x).toFixed(3) + '° ' + (x > 0 ? 'out' : 'in');
+  const dc = x => !Number.isFinite(x) ? '' : x <= 0.1 ? 'good' : x <= 0.25 ? 'warn' : 'bad';
+  const ext = (c, k, pos, neg) => `${fmtExt(c.rm[k], c.rm.edge[k], pos, neg)} / ${fmtExt(c.rs[k], c.rs.edge[k], pos, neg)}`;
+  return `<div class="tablewrap"><table><thead><tr><th>Iso level</th><th>Mean shift</th><th>95%</th><th>Max</th><th>Sim vs meas</th><th>Area sim ÷ meas</th><th>Left m / s</th><th>Right m / s</th><th>Down m / s</th><th>Up m / s</th></tr></thead><tbody>` +
+    cd.map(c => `<tr><td>${c.L.toLocaleString('en-US')} cd</td>` + (c.ok
+      ? `<td class="mono dl ${dc(c.mean)}">${c.mean.toFixed(3)}°</td><td class="mono">${c.p95.toFixed(3)}°</td><td class="mono">${c.max.toFixed(3)}°</td><td class="mono">${sg(c.signed)}</td>`
+      : `<td class="mono" colspan="4" style="text-align:center;color:var(--ink-2)">level not reached in both</td>`) +
+      `<td class="mono">${Number.isFinite(c.areaRatio) ? '×' + c.areaRatio.toFixed(3) : '–'}</td><td class="mono">${ext(c, 'left', 'R', 'L')}</td><td class="mono">${ext(c, 'right', 'R', 'L')}</td><td class="mono">${ext(c, 'down', 'U', 'D')}</td><td class="mono">${ext(c, 'up', 'U', 'D')}</td></tr>`).join('') +
+    `</tbody></table></div><p class="interp">Distances are measured in degrees between the measured and simulated iso lines (simulation aligned and scaled). <strong>Sim vs meas</strong> is positive where the simulated line lies outside the measured one. Extents give the furthest angle each level reaches; * marks the edge of the comparison window.</p>`;
+}
+function calScanAt(){ return st.cut ? st.cut.gAt : st.sliceH; }
+function figCalScan(c){
+  const r = st.res, cal = st.calRes, h = calScanAt();
+  let i = 0; r.hs.forEach((x, k) => { if (Math.abs(x - h) < Math.abs(r.hs[i] - h)) i = k; });
+  const col = Z => r.vs.map((v, j) => { const x = Z[j][i]; return x > 0 ? x : null; });
+  const data = [
+    { type:'scatter', mode:'lines', x:r.vs, y:col(r.M), name:'Measured', line:{ color:c.meas, width:2 } },
+    { type:'scatter', mode:'lines', x:r.vs, y:col(r.S), name:'Simulated', line:{ color:c.sim, width:1.6, dash:'dash' } },
+    { type:'scatter', mode:'lines', x:r.vs, y:col(cal.C), name:'Calibrated simulation', line:{ color:c.cal, width:1.8, dash:'dot' } } ];
+  return { data, layout: baseLayout(c, { showlegend:true, legend:{ x:0.01, y:0.98, xanchor:'left', yanchor:'top', bgcolor:'rgba(0,0,0,0)', font:{ size:11 } }, hovermode:'x unified',
+    yaxis:{ type:'log', title:{ text:'cd', font:{ size:12, color:c.ink2 } }, gridcolor:c.line, linecolor:c.line, tickcolor:c.line, ticks:'outside', exponentformat:'none' },
+    xaxis:{ title:{ text:'V (°)   D ← → U', font:{ size:12, color:c.ink2 } }, gridcolor:c.line, zerolinecolor:c.ink2, linecolor:c.line, ticks:'outside', tickcolor:c.line },
+    title:{ text:`Vertical scan at H = ${fmtAng(r.hs[i], 'R', 'L', '0')}: measured, simulated and calibrated`, font:{ size:13, color:c.ink }, x:0.01, xanchor:'left' } }) };
+}
+function calRows(){
+  const c = st.calRes, r = st.res;
+  const [dH, cH] = detLabel(c.riseH), [dV, cV] = detLabel(c.riseV);
+  return [
+    ['Blur σ horizontal', c.sh.toFixed(3) + '°', dH, cH],
+    ['Blur σ vertical', c.sv.toFixed(3) + '°', dV, cV],
+    ['Aim correction with blur', fmtShift(c.ox, c.oy), `total ${fmtShift(r.dh + c.ox, r.dv + c.oy)}`, ''],
+    ['Gain a', '×' + c.a.toFixed(3), 'on top of scale k ' + r.k.toFixed(3), ''],
+    ['Wide-angle halo (5° scatter)', c.haloPct.toFixed(3) + '% Imax', 'at its peak', ''],
+    ['Uniform floor', c.floorPct.toFixed(3) + '% Imax', '', '']
+  ];
+}
+function calTableHTML(){
+  const c = st.calRes, tol = st.opts.tolPct, pc = x => Number.isFinite(x) ? (x*100).toFixed(1) + '%' : '–';
+  const g0 = st.gRes, g1 = c.gamma;
+  const ba = [
+    ['RMS deviation', '±' + pc(c.before.rms), '±' + pc(c.after.rms)],
+    ['Mean bias', fmtPct(c.before.bias), fmtPct(c.after.bias)],
+    [`Within ±${tol}%`, pc(c.before.inTol), pc(c.after.inTol)],
+    [`Gamma pass ${st.gamma.dIPct}% / ${st.gamma.dta}°`, g0 ? pc(g0.pass) : '–', g1 ? pc(g1.pass) : '–']
+  ];
+  const sv = c.sv, sh = c.sh, stray = c.haloPct + c.floorPct;
+  const msgs = [];
+  if (c.riseV >= 0.005 && sv >= 0.03) msgs.push(`The measured beam is softer vertically than the simulation, equivalent to a ${sv.toFixed(2)}° Gaussian blur. On a low beam this lowers cut-off sharpness G.`);
+  if (c.riseH >= 0.005 && sh >= 0.03) msgs.push(`Horizontally the extra spread is about ${sh.toFixed(2)}°.`);
+  if (stray >= 0.05) msgs.push(`The simulation lacks about ${stray.toFixed(2)}% of Imax of stray light (${c.haloPct.toFixed(2)}% as a wide halo, ${c.floorPct.toFixed(2)}% as a flat floor). This matters most for B50L and other glare points.`);
+  if (!msgs.length) msgs.push('The simulation already matches the measured spread; no significant blur or stray light was needed.');
+  return `<div class="tablewrap"><table><thead><tr><th>Fitted parameter</th><th>Value</th><th class="lft">Note</th></tr></thead><tbody>` +
+    calRows().map(r => `<tr><td>${r[0]}</td><td class="mono">${r[1]}</td><td class="lft">${r[3] ? `<span class="det ${r[3]}">${r[2]}</span>` : r[2]}</td></tr>`).join('') + `</tbody></table></div>` +
+    `<div class="tablewrap"><table><thead><tr><th>Agreement</th><th>Simulation as is</th><th>Calibrated simulation</th></tr></thead><tbody>` +
+    ba.map(r => `<tr><td>${r[0]}</td><td class="mono">${r[1]}</td><td class="mono">${r[2]}</td></tr>`).join('') + `</tbody></table></div>` +
+    `<p class="interp"><strong>Reading the fit.</strong> ${msgs.join(' ')} Blur usually comes from LED die size and placement tolerance, surface roughness or scatter missing from the optical model, and the goniometer detector aperture. Halo and floor come from lens haze, housing reflections, dust and lab stray light. Feed σ back into the simulation as source blur or a scatter (BSDF) setting, then compare again.</p>`;
+}
+
 function plotDivs(n){
-  const box = $('plots'); box.className = 'plots' + (n === 2 ? ' two' : '');
-  if (box.children.length !== n){ box.innerHTML = Array.from({ length:n }, (_, i) => `<div class="plotbox"><div class="plot" id="pl${i}"></div></div>`).join(''); }
+  const box = $('plots'); box.className = 'plots' + (n >= 2 ? ' two' : '');
+  if (box.children.length !== n){ box.innerHTML = Array.from({ length:n }, (_, i) => `<div class="plotbox"${n === 3 && i === 2 ? ' style="grid-column:1/-1"' : ''}><div class="plot" id="pl${i}"></div></div>`).join(''); }
   return Array.from({ length:n }, (_, i) => $('pl' + i));
 }
 function renderViewbar(){
   const v = st.view, vb = $('viewbar');
   if (v === 'ratio') vb.innerHTML = `<label class="f">Colour range<select id="vbSpan"><option value="0.32">×0.8 – ×1.25</option><option value="0.58">×0.67 – ×1.5</option><option value="1">×0.5 – ×2</option><option value="2">×0.25 – ×4</option></select></label><label class="f">Iso lines (cd)<input id="vbLev" type="text" placeholder="auto" style="width:160px;font-family:var(--f-mono);font-size:13px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink)"></label>`;
   else if (v === 'iso' || v === 'overlay') vb.innerHTML = `<label class="f">Iso lines (cd)<input id="vbLev" type="text" placeholder="auto" style="width:200px;font-family:var(--f-mono);font-size:13px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink)"></label>`;
+  else if (v === 'gamma') vb.innerHTML = `<label class="f">ΔI (%)<input id="gmI" type="number" step="1" min="1"></label><label class="f">DTA (°)<input id="gmD" type="number" step="0.05" min="0.01"></label><label class="f">Normalisation<select id="gmN"><option value="local">Local (% of measured)</option><option value="global">Global (% of Imax)</option></select></label><label class="f">Evaluate above (% Imax)<input id="gmT" type="number" step="0.5" min="0"></label><label class="f">Iso lines (cd)<input id="vbLev" type="text" placeholder="auto" style="width:150px"></label>`;
+  else if (v === 'calib') vb.innerHTML = `<span class="hint" style="margin:0">Fits blur, stray light and aim to the current aligned and scaled simulation. Change alignment, scaling or the window on the left and the fit reruns.</span>`;
   else if (v === 'cutoff') vb.innerHTML = `<label class="f">Scans at H (°)<input id="cbScans" type="text" style="width:170px"></label><label class="f">G check at H (°)<input id="cbGAt" type="number" step="0.5"></label><label class="f">Min G<input id="cbGMin" type="number" step="0.01" placeholder="none"></label><label class="f">Linearity max (°)<input id="cbLin" type="number" step="0.05" placeholder="none"></label><label class="f">Simulation<select id="cbAl"><option value="raw">As simulated</option><option value="al">Aligned</option></select></label>`;
   else vb.innerHTML = `<label class="f">Horizontal scan at V (°)<input id="vbSV" type="number" step="0.01"></label><label class="f">Vertical scan at H (°)<input id="vbSH" type="number" step="0.01"></label><label class="ck"><input type="checkbox" id="vbLog">Log scale</label><span class="hint" style="margin:0">Dotted lines mark the steepest gradient (cut-off) on the vertical scan.</span>`;
   if (v === 'cutoff' && st.cut){
@@ -1173,8 +1582,17 @@ function renderViewbar(){
     };
     ['cbScans', 'cbGAt', 'cbGMin', 'cbLin', 'cbAl'].forEach(id => $(id).addEventListener('change', upd));
   }
+  if (v === 'gamma'){
+    const g = st.gamma; $('gmI').value = g.dIPct; $('gmD').value = g.dta; $('gmN').value = g.norm; $('gmT').value = g.thrPct;
+    const upd = () => {
+      const a = parseFloat($('gmI').value), b = parseFloat($('gmD').value), t = parseFloat($('gmT').value);
+      if (a > 0) g.dIPct = a; if (b > 0) g.dta = b; if (t >= 0) g.thrPct = t; g.norm = $('gmN').value;
+      recomputeGamma(); renderKPIs(); renderView();
+    };
+    ['gmI', 'gmD', 'gmN', 'gmT'].forEach(id => $(id).addEventListener('change', upd));
+  }
   const span = $('vbSpan'); if (span){ span.value = String(st.ratioSpan); span.onchange = () => { st.ratioSpan = +span.value; renderView(); }; }
-  const lev = $('vbLev'); if (lev){ lev.value = st.isoLevels; lev.onchange = () => { st.isoLevels = lev.value; renderView(); }; }
+  const lev = $('vbLev'); if (lev){ lev.value = st.isoLevels; lev.onchange = () => { st.isoLevels = lev.value; recomputeContours(); renderKPIs(); renderView(); }; }
   const sv = $('vbSV'); if (sv){ sv.value = st.sliceV; sv.onchange = () => { st.sliceV = parseFloat(sv.value) || 0; renderView(); }; }
   const sh = $('vbSH'); if (sh){ sh.value = st.sliceH; sh.onchange = () => { st.sliceH = parseFloat(sh.value) || 0; renderView(); }; }
   const lg = $('vbLog'); if (lg){ lg.checked = st.logY; lg.onchange = () => { st.logY = lg.checked; renderView(); }; }
@@ -1192,7 +1610,25 @@ function renderView(){
   else if (v === 'iso'){ const [a, b] = plotDivs(2); const f1 = figIso(c, 'M'), f2 = figIso(c, 'S'); Plotly.react(a, f1.data, f1.layout, CFG); Plotly.react(b, f2.data, f2.layout, CFG);
     note = 'Both plots share one colour scale. Lines: ' + isoLevels().map(x => x.toLocaleString('en-US')).join(', ') + ' cd.'; }
   else if (v === 'overlay'){ const [d] = plotDivs(1); const f = figOverlay(c); Plotly.react(d, f.data, f.layout, CFG);
-    note = 'Where a dashed line sits outside its solid partner, the simulation predicts that level further out than measured.'; }
+    note = 'Where a dashed line sits outside its solid partner, the simulation predicts that level further out than measured.';
+    $('viewExtra').innerHTML = contourTableHTML(); }
+  else if (v === 'gamma'){
+    if (!st.gRes || !st.gRes.n){ plotDivs(0); $('plotNote').textContent = 'No measured cells above the gamma threshold.'; return; }
+    const [d] = plotDivs(1); const f = figGamma(c); Plotly.react(d, f.data, f.layout, CFG);
+    note = 'Green: passes (γ ≤ 1), darker green is closer to 1. Amber to red: fails, capped at γ = 2. Grey lines are measured isocandelas.';
+    $('viewExtra').innerHTML = gammaTableHTML(); }
+  else if (v === 'calib'){
+    if (!(st.calRes && st.calFor === st.res)){
+      plotDivs(0);
+      $('plotNote').textContent = '';
+      $('viewExtra').innerHTML = st.calErr ? `<p class="interp" style="color:var(--bad)">The calibration fit failed: ${st.calErr}</p>` : '<p class="busyline">Fitting blur, stray light and aim. This takes a few seconds.</p>';
+      ensureCalibration(); return;
+    }
+    const cal = st.calRes, [a, b, d] = plotDivs(3);
+    const f1 = figRatio(c, st.res.R, st.res.S, 'Before: measured ÷ simulated'), f2 = figRatio(c, cal.Rafter, cal.C, 'After: measured ÷ calibrated simulation'), f3 = figCalScan(c);
+    Plotly.react(a, f1.data, f1.layout, CFG); Plotly.react(b, f2.data, f2.layout, CFG); Plotly.react(d, f3.data, f3.layout, CFG);
+    note = 'Both maps use the same colour scale (set it in the Ratio map tab). What remains after calibration is shape error that blur and stray light cannot explain.';
+    $('viewExtra').innerHTML = calTableHTML(); }
   else if (v === 'cutoff'){
     if (!st.cutRes){ plotDivs(0); $('plotNote').textContent = 'No cut-off could be analysed in this window.'; $('viewExtra').innerHTML = ''; return; }
     const [a, b] = plotDivs(2); const f1 = figCutTrace(c), f2 = figCutG(c);
@@ -1264,6 +1700,25 @@ function pointsCSV(){
     out.push('', 'cut_off_metric,measured,simulated,meas_minus_sim,limit,measured_status,simulated_status');
     cr.forEach(x => out.push([`"${x[0]}"`, x[1], x[2], x[3], x[4], x[5] == null ? 'na' : x[5] ? 'pass' : 'fail', x[6] == null ? 'na' : x[6] ? 'pass' : 'fail'].join(',')));
   }
+  const g = st.gRes;
+  if (g && g.n){
+    out.push('', `gamma_band,cells,gamma_pass_pct,ratio_only_pass_pct,criteria`);
+    g.bands.forEach(b => out.push([`"${b.name}"`, b.n, (100*b.pass/b.n).toFixed(2), (100*b.rpass/b.n).toFixed(2), `"${st.gamma.dIPct}% / ${st.gamma.dta} deg ${st.gamma.norm}"`].join(',')));
+    out.push(['"All"', g.n, (100*g.pass).toFixed(2), (100*g.ratioPass).toFixed(2), ''].join(','));
+  }
+  if (st.cdRes && st.cdRes.length){
+    out.push('', 'iso_level_cd,mean_shift_deg,p95_deg,max_deg,signed_sim_vs_meas_deg,area_ratio_sim_meas,left_meas,left_sim,right_meas,right_sim,down_meas,down_sim,up_meas,up_sim');
+    const f = x => Number.isFinite(x) ? (+x.toFixed(4)) : '';
+    st.cdRes.forEach(c => out.push([c.L, c.ok ? f(c.mean) : '', c.ok ? f(c.p95) : '', c.ok ? f(c.max) : '', c.ok ? f(c.signed) : '', f(c.areaRatio),
+      f(c.rm.left), f(c.rs.left), f(c.rm.right), f(c.rs.right), f(c.rm.down), f(c.rs.down), f(c.rm.up), f(c.rs.up)].join(',')));
+  }
+  if (st.calRes && st.calFor === st.res){
+    const c = st.calRes;
+    out.push('', 'calibration_parameter,value');
+    [['sigma_h_deg', c.sh], ['sigma_v_deg', c.sv], ['sigma_h_cost_rise', c.riseH], ['sigma_v_cost_rise', c.riseV], ['aim_correction_h_deg', c.ox], ['aim_correction_v_deg', c.oy],
+     ['gain', c.a], ['halo_pct_imax', c.haloPct], ['floor_pct_imax', c.floorPct], ['rms_before', c.before.rms], ['rms_after', c.after.rms],
+     ['gamma_pass_before', g ? g.pass : NaN], ['gamma_pass_after', c.gamma ? c.gamma.pass : NaN]].forEach(([k, v]) => out.push(`${k},${Number.isFinite(v) ? +v.toFixed(5) : ''}`));
+  }
   return out.join('\n');
 }
 function gridCSV(){
@@ -1291,6 +1746,30 @@ async function reportHTML(){
 <table><thead><tr><th>Metric</th><th>Measured</th><th>Simulated</th><th>Meas − sim</th><th>Limit</th><th>Measured</th><th>Simulated</th></tr></thead><tbody>${rows.map(x => `<tr><td>${x[0]}</td><td>${x[1]}</td><td>${x[2]}</td><td>${x[3]}</td><td>${x[4]}</td><td>${pp(x[5])}</td><td>${pp(x[6])}</td></tr>`).join('')}</tbody></table>
 ${im(cT, 'Cut-off line trace; dotted lines are the scan positions, diamonds the elbow estimate')}${im(cG, 'Gradient profile at the G check position')}`;
   }
+  let gHTML = '', cdHTML = '', calHTML = '';
+  if (st.gRes && st.gRes.n){
+    const gi = await img(figGamma(c));
+    const g = st.gRes, pc = x => (x*100).toFixed(1) + '%';
+    gHTML = `<h2>Gamma index</h2><p class="sub" style="margin:0 0 8px">Criteria ${st.gamma.dIPct}% / ${st.gamma.dta}° (${st.gamma.norm}), evaluated above ${st.gamma.thrPct}% of measured Imax. Mean γ ${g.mean.toFixed(3)}, 95th percentile ${g.p95.toFixed(3)}.</p>
+<table><thead><tr><th>Intensity band</th><th>Cells</th><th>Gamma pass</th><th>Ratio-only pass</th></tr></thead><tbody>${g.bands.map(b => `<tr><td>${b.name}</td><td>${b.n}</td><td>${pc(b.pass/b.n)}</td><td>${pc(b.rpass/b.n)}</td></tr>`).join('')}<tr><td><strong>All</strong></td><td>${g.n}</td><td><strong>${pc(g.pass)}</strong></td><td>${pc(g.ratioPass)}</td></tr></tbody></table>${im(gi, 'Gamma map: green passes, amber to red fails (capped at 2)')}`;
+  }
+  if (st.cdRes && st.cdRes.length){
+    const f3 = x => Number.isFinite(x) ? x.toFixed(3) + '°' : '–';
+    cdHTML = `<h3 style="font-size:14px;margin:14px 0 6px">Contour displacement</h3><table><thead><tr><th>Level</th><th>Mean</th><th>95%</th><th>Max</th><th>Sim vs meas</th><th>Area sim ÷ meas</th><th>Left m / s</th><th>Right m / s</th><th>Down m / s</th><th>Up m / s</th></tr></thead><tbody>${st.cdRes.map(cd => {
+      const ex = k => `${fmtExt(cd.rm[k], cd.rm.edge[k], k === 'down' || k === 'up' ? 'U' : 'R', k === 'down' || k === 'up' ? 'D' : 'L')} / ${fmtExt(cd.rs[k], cd.rs.edge[k], k === 'down' || k === 'up' ? 'U' : 'R', k === 'down' || k === 'up' ? 'D' : 'L')}`;
+      return `<tr><td>${cd.L.toLocaleString('en-US')} cd</td><td>${cd.ok ? f3(cd.mean) : '–'}</td><td>${cd.ok ? f3(cd.p95) : '–'}</td><td>${cd.ok ? f3(cd.max) : '–'}</td><td>${cd.ok && Number.isFinite(cd.signed) ? (cd.signed >= 0 ? '+' : '−') + Math.abs(cd.signed).toFixed(3) + '°' : '–'}</td><td>${Number.isFinite(cd.areaRatio) ? '×' + cd.areaRatio.toFixed(3) : '–'}</td><td>${ex('left')}</td><td>${ex('right')}</td><td>${ex('down')}</td><td>${ex('up')}</td></tr>`; }).join('')}</tbody></table><p class="sub" style="margin:6px 0 0">Positive sim vs meas: simulated line lies outside the measured one. * window edge.</p>`;
+  }
+  try {
+    const cal = calibrateNow();
+    const b1 = await img(figRatio(c, r.R, r.S, 'Before: measured ÷ simulated'), 420), b2 = await img(figRatio(c, cal.Rafter, cal.C, 'After: measured ÷ calibrated simulation'), 420), b3 = await img(figCalScan(c), 380);
+    const pc = x => Number.isFinite(x) ? (x*100).toFixed(1) + '%' : '–';
+    calHTML = `<h2>Calibration: blur and stray light</h2><p class="sub" style="margin:0 0 8px">I<sub>cal</sub> = a·(Gaussian blur ∗ I<sub>sim</sub>) shifted by the aim correction, plus a 5° scatter halo and a uniform floor, fitted on relative error above 0.2% of measured Imax.</p>
+<table><thead><tr><th>Parameter</th><th>Value</th><th>Note</th></tr></thead><tbody>${calRows().map(x => `<tr><td>${x[0]}</td><td>${x[1]}</td><td>${x[2]}</td></tr>`).join('')}</tbody></table>
+<table style="margin-top:10px"><thead><tr><th>Agreement</th><th>Simulation as is</th><th>Calibrated</th></tr></thead><tbody>
+<tr><td>RMS deviation</td><td>±${pc(cal.before.rms)}</td><td>±${pc(cal.after.rms)}</td></tr><tr><td>Mean bias</td><td>${fmtPct(cal.before.bias)}</td><td>${fmtPct(cal.after.bias)}</td></tr>
+<tr><td>Within ±${o.tolPct}%</td><td>${pc(cal.before.inTol)}</td><td>${pc(cal.after.inTol)}</td></tr><tr><td>Gamma pass</td><td>${st.gRes ? pc(st.gRes.pass) : '–'}</td><td>${cal.gamma ? pc(cal.gamma.pass) : '–'}</td></tr></tbody></table>
+<div class="grid">${im(b1, 'Before calibration')}${im(b2, 'After calibration')}</div>${im(b3, 'Vertical scan: measured, simulated, calibrated')}`;
+  } catch (e){ calHTML = `<h2>Calibration: blur and stray light</h2><p class="sub">Fit not available: ${esc(e.message)}</p>`; }
   const kv = [['Lamp function', esc(FUNCS[st.func].label)], ['Measured file', esc(st.meas.name) + ' (' + st.meas.format + (st.meas.typeLabel ? ', ' + esc(st.meas.typeLabel) : '') + (o.mirM ? ', mirrored' : '') + ')'],
     ['Simulated file', esc(st.sim.name) + ' (' + st.sim.format + (st.sim.typeLabel ? ', ' + esc(st.sim.typeLabel) : '') + (o.mirS ? ', mirrored' : '') + ')'],
     ['Comparison window', `H ${r.win.hmin}° to ${r.win.hmax}°, V ${r.win.vmin}° to ${r.win.vmax}°, step ${r.step}°`],
@@ -1299,7 +1778,10 @@ ${im(cT, 'Cut-off line trace; dotted lines are the scan positions, diamonds the 
     ['Imax', `measured ${fmtCd(r.Mmax)} cd at ${fmtPos(...r.MmaxAt)}; simulated ${fmtCd(r.Smax)} cd at ${fmtPos(...r.SmaxAt)}`],
     ['Flux in window', `measured ${r.phiM.toFixed(1)} lm; raw simulation ${r.phiS0.toFixed(1)} lm (${fmtPct(r.phiM/r.phiS0 - 1)})`],
     ['RMS deviation', `±${(rmsPct*100).toFixed(1)}%, mean bias ${fmtPct(biasPct)} over ${r.n} cells above ${o.maskPct}% Imax`],
-    [`Cells within ±${o.tolPct}%`, (r.inTol*100).toFixed(1) + '%'], ['Correlation r (log₁₀)', Number.isFinite(r.r) ? r.r.toFixed(4) : '–']];
+    [`Cells within ±${o.tolPct}%`, (r.inTol*100).toFixed(1) + '%'], ['Correlation r (log₁₀)', Number.isFinite(r.r) ? r.r.toFixed(4) : '–'],
+    ['Gamma pass rate', st.gRes && st.gRes.n ? `${(st.gRes.pass*100).toFixed(1)}% at ${st.gamma.dIPct}% / ${st.gamma.dta}° (${st.gamma.norm})` : '–'],
+    ['Mean contour shift', (() => { const ok = (st.cdRes || []).filter(x => x.ok); return ok.length ? (ok.reduce((a, x) => a + x.mean, 0)/ok.length).toFixed(3) + '° over ' + ok.length + ' iso levels' : '–'; })()],
+    ['Blur σ H / V', st.calRes && st.calFor === r ? `${st.calRes.sh.toFixed(3)}° / ${st.calRes.sv.toFixed(3)}°, stray light ${(st.calRes.haloPct + st.calRes.floorPct).toFixed(2)}% Imax` : '–']];
   const ptRows = r.pts.map(p => `<tr><td>${esc(p.name)}</td><td>${fmtPos(p.h, p.v)}</td><td>${fmtCd(p.m)}</td><td>${fmtCd(p.s)}</td><td>${fmtPct(p.delta)}</td><td>${limText(p)}</td><td class="${p.jm.st}">${p.jm.st}</td><td class="${p.js.st}">${p.js.st}</td></tr>`).join('');
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Correlation report: ${esc(st.sim.name)} vs ${esc(st.meas.name)}</title>
 <style>body{font-family:"IBM Plex Sans",system-ui,sans-serif;color:#1B2025;max-width:1100px;margin:32px auto;padding:0 20px;font-size:14px;line-height:1.5}h1{font-size:24px;margin:0 0 4px}h2{font-size:16px;margin:28px 0 8px;border-bottom:1px solid #D6DBDD;padding-bottom:4px}.sub{color:#56616B;margin:0 0 18px}table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}td,th{border-bottom:1px solid #E3E6E8;padding:6px 8px;text-align:left;vertical-align:top}th{background:#F2F4F3;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:#56616B}.kv td:first-child{width:220px;color:#56616B}.pass{color:#22774A;font-weight:600}.fail{color:#B42318;font-weight:600}figure{margin:16px 0}img{max-width:100%;border:1px solid #E3E6E8}figcaption{font-size:12px;color:#56616B}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media print{h2{break-after:avoid}figure{break-inside:avoid}}</style></head><body>
@@ -1307,8 +1789,10 @@ ${im(cT, 'Cut-off line trace; dotted lines are the scan positions, diamonds the 
 <h2>Summary</h2><table class="kv">${kv.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}</table>
 <h2>Test points</h2><table><thead><tr><th>Point</th><th>Position</th><th>Measured cd</th><th>Simulated cd</th><th>Meas vs sim</th><th>Limit</th><th>Measured</th><th>Simulated</th></tr></thead><tbody>${ptRows || '<tr><td colspan="8">No test points defined.</td></tr>'}</tbody></table>
 ${cutHTML}
+${gHTML}
+${calHTML}
 <h2>Ratio map</h2>${im(ratio, 'Measured ÷ simulated on a log₂ scale. Orange: measurement brighter, blue: darker.')}
-<h2>Isocandela overlay</h2>${im(over, 'Measured solid, simulated dashed.')}
+<h2>Isocandela overlay</h2>${im(over, 'Measured solid, simulated dashed.')}${cdHTML}
 <h2>Isocandela plots</h2>${im(isoM, 'Measured')}${im(isoS, 'Simulated, aligned and scaled')}
 <h2>Scans</h2>${im(sH, 'Horizontal scan')}${im(sV, 'Vertical scan; dotted lines mark the steepest gradient')}
 <p class="sub" style="margin-top:24px">H positive to the right, V positive upward. Preset regulation limits should be checked against the applicable regulation revision.</p></body></html>`;
