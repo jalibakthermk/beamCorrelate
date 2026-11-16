@@ -17,6 +17,7 @@ Beam Correlate puts a simulated and a measured luminous intensity distribution o
 - **Scans:** horizontal and vertical intensity scans.
 - **Cut-off analysis** (low beam, front fog): sharpness G = log₁₀ I(β) − log₁₀ I(β+0.1°) from vertical scans in 0.05° steps, cut-off position β at each scan, linearity, elbow position and shoulder angle, with a warning when the data resolution limits G.
 - **Gamma index:** combined intensity / distance-to-agreement test (default 10% / 0.2°, local or global), gamma map, pass rate by intensity band, and the share of cells that fail on value alone but pass within the position tolerance.
+- **SSIM map:** structural similarity on log intensity with an adjustable Gaussian window, shown as SSIM or as its luminance, contrast and structure components, with means by intensity band and before/after calibration.
 - **Contour displacement:** for each iso level, mean, 95th percentile and maximum distance in degrees between measured and simulated isocandelas, signed in/out shift, area ratio and left/right/up/down extents.
 - **Calibration fit:** fits Gaussian blur σH/σV, aim correction, a 5° scatter halo and a uniform stray-light floor that turn the simulation into the measurement, labels each σ by how well the data determine it, and shows before/after residual maps and agreement.
 - **Test points:** per-point measured vs simulated values with pass/fail for both, using absolute limits (`min`, `max` in cd) or limits relative to Imax (`minRel`, `maxRel`).

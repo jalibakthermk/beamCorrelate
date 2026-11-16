@@ -337,6 +337,7 @@ footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);paddin
         <button class="tab" role="tab" data-view="slices" aria-selected="false">Scans</button>
         <button class="tab" role="tab" data-view="cutoff" aria-selected="false" id="tabCut">Cut-off</button>
         <button class="tab" role="tab" data-view="gamma" aria-selected="false">Gamma</button>
+        <button class="tab" role="tab" data-view="ssim" aria-selected="false">SSIM</button>
         <button class="tab" role="tab" data-view="calib" aria-selected="false">Calibration</button>
       </div>
     </div>
@@ -360,6 +361,7 @@ footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);paddin
       <p><strong>Ratio.</strong> Measured / simulated, on a log₂ colour scale so ×2 and ×0.5 look equally far from ×1. RMS deviation and the tolerance band are computed on unmasked cells only.</p>
       <p><strong>Cut-off.</strong> Vertical scans in 0.05° steps on log-interpolated data. Sharpness G = log₁₀ I(β) − log₁₀ I(β+0.1°), taken at its maximum. The cut-off position β is the centre of the gradient peak (inflection of log I). Linearity is the spread of β across the scan positions. The elbow is where a straight-line fit of the rising shoulder meets the horizontal part, and the shoulder angle comes from that fit. G is only as good as the data resolution near the cut-off.</p>
       <p><strong>Gamma.</strong> For each measured cell above the threshold, γ = min √(|Δr|²/DTA² + ΔI²/ΔI<sub>tol</sub>²) over nearby simulated positions, searched to 2·DTA (so γ is capped at 2). γ ≤ 1 passes: the simulation matches either in value or within the distance-to-agreement. ΔI<sub>tol</sub> is a share of the local measured value (local) or of measured Imax (global). The plain-ratio pass rate is shown beside it; the gap between them is error that is only a small position shift.</p>
+      <p><strong>SSIM.</strong> Structural similarity on log₁₀(I / mask threshold), so it weighs a 2:1 error the same at 500 cd and at 20 000 cd. Local means, variances and covariance use a Gaussian window of σ<sub>w</sub> degrees. SSIM = l·c·s: luminance l compares local mean level, contrast c compares local variation, structure s is the local correlation of the two patterns. C₁ = (0.01·D)², C₂ = (0.03·D)², C₃ = C₂/2, with D the dynamic range above the mask in decades. Cells where both datasets are below the mask are not evaluated. A low s with l and c near 1 points to a shape difference: a lost striation, a moved kink or a smeared cut-off.</p>
       <p><strong>Contours.</strong> For each iso level, distances in degrees from every point of one contour to the nearest point of the other, both ways: mean, 95th percentile and maximum (Hausdorff). The signed shift is positive where the simulated line lies outside the measured one. Extents are the furthest cells at or above the level; * marks a window edge.</p>
       <p><strong>Calibration.</strong> Fits I<sub>cal</sub> = a·(G<sub>σH,σV</sub> ∗ I<sub>sim</sub>)(H−δH, V−δV) + halo + floor, where G is a Gaussian blur, the halo is the simulation blurred by 5° and the floor is uniform. Aim (δ), blur and the linear terms are fitted together because blur moves the apparent centre of an asymmetric beam. Each σ is labelled by how much the fit worsens when it is halved or raised by half: a beam without sharp features in one direction cannot determine σ in that direction.</p>
     </div>
@@ -949,6 +951,49 @@ function gammaIndex(res, o){
     bands: bands.filter(b => b.n > 0), opts: Object.assign({}, o) };
 }
 
+/* ---------- Structural similarity (SSIM) ----------
+   Computed on log10(I / threshold), so the mask threshold maps to 0 and values below it are clamped there, using a
+   Gaussian window of σw degrees. x = measured, y = simulated (aligned and scaled).
+   l = (2μxμy + C1)/(μx² + μy² + C1), c = (2σxσy + C2)/(σx² + σy² + C2), s = (σxy + C3)/(σxσy + C3), SSIM = l·c·s,
+   C1 = (0.01·D)², C2 = (0.03·D)², C3 = C2/2, D = log10(Imax_meas / threshold), the dynamic range in decades.
+   Evaluated where either dataset is above the threshold. */
+function ssimMap(res, o){
+  const { hs, vs, M, S, step } = res, ny = vs.length, nx = hs.length;
+  const thr = res.thr > 0 ? res.thr : 1e-3*res.Mmax, f0 = Math.log10(thr);
+  const D = Math.max(0.5, Math.log10(res.Mmax/thr));
+  const C1 = (0.01*D)**2, C2 = (0.03*D)**2, C3 = C2/2;
+  const lg = Z => Z.map(r => Float64Array.from(r, x => Number.isFinite(x) ? (x > thr ? Math.log10(x) - f0 : 0) : NaN));
+  const X = lg(M), Y = lg(S);
+  const sig = Math.max(step, (o && o.sigma) || 0.3), k = gaussKernel(sig, step);
+  const blur = Z => { const H = convH(Z, k); return Z.map((row, j) => Float64Array.from(row, (x, i) => convVAt(H, k, j, i))); };
+  const prod = (A, B) => A.map((r, j) => Float64Array.from(r, (x, i) => x*B[j][i]));
+  const mx = blur(X), my = blur(Y), xx = blur(prod(X, X)), yy = blur(prod(Y, Y)), xy = blur(prod(X, Y));
+  const mk = () => vs.map(() => new Float64Array(nx).fill(NaN));
+  const SS = mk(), Lm = mk(), Cm = mk(), Sm = mk();
+  const bands = [
+    { name:'≥ 50% Imax', lo:0.5, hi:Infinity }, { name:'10–50% Imax', lo:0.1, hi:0.5 },
+    { name:'1–10% Imax', lo:0.01, hi:0.1 }, { name:'< 1% Imax', lo:0, hi:0.01 }
+  ].map(b => Object.assign(b, { n:0, ss:0, l:0, c:0, s:0, good:0 }));
+  let n = 0, sSS = 0, sL = 0, sC = 0, sS = 0, good = 0; const all = [];
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++){
+    const m = M[j][i], s0 = S[j][i];
+    if (!(m >= thr || s0 >= thr) || !Number.isFinite(X[j][i]) || !Number.isFinite(Y[j][i])) continue;
+    const ux = mx[j][i], uy = my[j][i]; if (!Number.isFinite(ux) || !Number.isFinite(uy)) continue;
+    const vx = Math.max(0, xx[j][i] - ux*ux), vy = Math.max(0, yy[j][i] - uy*uy), cxy = xy[j][i] - ux*uy;
+    const sx = Math.sqrt(vx), sy = Math.sqrt(vy);
+    const l = (2*ux*uy + C1)/(ux*ux + uy*uy + C1), c = (2*sx*sy + C2)/(vx + vy + C2), st = (cxy + C3)/(sx*sy + C3);
+    const v = l*c*st;
+    SS[j][i] = v; Lm[j][i] = l; Cm[j][i] = c; Sm[j][i] = st;
+    n++; sSS += v; sL += l; sC += c; sS += st; all.push(v); if (v >= 0.9) good++;
+    const rel = (m > 0 ? m : 0)/res.Mmax;
+    for (const b of bands) if (rel >= b.lo && rel < b.hi){ b.n++; b.ss += v; b.l += l; b.c += c; b.s += st; if (v >= 0.9) b.good++; break; }
+  }
+  all.sort((a, b) => a - b);
+  return { SSIM: SS, L: Lm, C: Cm, S: Sm, n, sigma: sig, D,
+    mean: n ? { ssim: sSS/n, l: sL/n, c: sC/n, s: sS/n } : null, p05: n ? all[Math.floor(0.05*(n - 1))] : NaN, good90: n ? good/n : NaN,
+    bands: bands.filter(b => b.n > 0).map(b => ({ name:b.name, n:b.n, ssim:b.ss/b.n, l:b.l/b.n, c:b.c/b.n, s:b.s/b.n, good90:b.good/b.n })) };
+}
+
 /* ---------- Isocandela contour displacement ---------- */
 function nnIndex(px, py, cs){
   const map = new Map(), key = (a, b) => a*131071 + b;
@@ -1175,7 +1220,7 @@ const PRESETS = {
   custom: [ { name:'HV', h:0, v:0 } ]
 };
 
-const BC = { DEG, range, bilinear, makeHV, makeC, expandC, parseIES, parseLDT, parseCSV, parseFile, demoPair, demoBeam, compute, slices, contourSegs, cutoffScan, cutoffAnalysis, gridSampler, gammaIndex, contourDisplacement, calibrationFit, PRESETS };
+const BC = { DEG, range, bilinear, makeHV, makeC, expandC, parseIES, parseLDT, parseCSV, parseFile, demoPair, demoBeam, compute, slices, contourSegs, cutoffScan, cutoffAnalysis, gridSampler, gammaIndex, ssimMap, contourDisplacement, calibrationFit, PRESETS };
 if (typeof window !== 'undefined') window.BC = BC;
 if (typeof module !== 'undefined') module.exports = BC;
 })();
@@ -1208,7 +1253,7 @@ const FUNCS = {
   rfog: { label:'Rear fog lamp', win:[-10, 10, -5, 5], step:0.1, pts:'rfog', demo:['signal', 300], slice:[0, 0], note:'Grid ±10° H, ±5° V, positions only. Add your limits.' },
   rev: { label:'Reversing lamp', win:[-45, 45, -5, 15], step:0.25, pts:'rev', demo:['signal', 250], slice:[0, 0], note:'Grid to ±45° H, positions only. Add your limits.' }
 };
-const st = { gamma:{ dIPct:10, dta:0.2, norm:'local', thrPct:1 }, gRes:null, cdRes:null, calRes:null, calFor:null, calBusy:false, calErr:null, func:'lb_rht', meas:null, sim:null, raw:{ meas:null, sim:null }, isDemo:false, view:'ratio', fitCache:null, res:null, cutRes:null, cut:null,
+const st = { ssim:{ sigma:0.3, comp:'ssim' }, sRes:null, gamma:{ dIPct:10, dta:0.2, norm:'local', thrPct:1 }, gRes:null, cdRes:null, calRes:null, calFor:null, calBusy:false, calErr:null, func:'lb_rht', meas:null, sim:null, raw:{ meas:null, sim:null }, isDemo:false, view:'ratio', fitCache:null, res:null, cutRes:null, cut:null,
   points: BC.PRESETS.lb_rht.slice(), ratioSpan:1, sliceH:2.5, sliceV:-0.86, logY:true, isoLevels:'' };
 const hasPlotly = typeof window.Plotly !== 'undefined';
 let dlCap = null;
@@ -1329,7 +1374,7 @@ function run(){
       if (o.alignMode !== 'manual'){ $('dh').value = res.dh.toFixed(3); $('dv').value = res.dv.toFixed(3); }
       if (o.scaleMode !== 'manual') $('k').value = res.k.toFixed(4);
       $('alignNote').textContent = `Simulation shifted ${fmtShift(res.dh, res.dv)} and scaled ×${res.k.toFixed(3)}.` + (res.fit && !res.fit.ok ? ' Best fit did not converge; check the window or mask.' : '');
-      recomputeCut(); recomputeGamma(); recomputeContours();
+      recomputeCut(); recomputeGamma(); recomputeSSIM(); recomputeContours();
       st.calRes = null; st.calFor = null; st.calErr = null;
       renderKPIs(); renderView(); renderTable();
     } catch (e){
@@ -1343,6 +1388,11 @@ function recomputeGamma(){
   try { st.gRes = BC.gammaIndex(st.res, st.gamma); } catch (e){ st.gRes = null; }
   if (st.calRes && st.calFor === st.res) st.calRes.gamma = BC.gammaIndex(Object.assign({}, st.res, { S: st.calRes.C }), st.gamma);
 }
+function recomputeSSIM(){
+  st.sRes = null; if (!st.res) return;
+  try { st.sRes = BC.ssimMap(st.res, st.ssim); } catch (e){ st.sRes = null; }
+  if (st.calRes && st.calFor === st.res) st.calRes.ssim = BC.ssimMap(Object.assign({}, st.res, { S: st.calRes.C }), st.ssim);
+}
 function recomputeContours(){
   st.cdRes = null; if (!st.res) return;
   try { st.cdRes = BC.contourDisplacement(st.res, isoLevels()); } catch (e){ st.cdRes = null; }
@@ -1352,6 +1402,7 @@ function calibrateNow(){
   const res = st.res;
   const cal = BC.calibrationFit(res, { tolPct: st.opts.tolPct, offsetRange: 0.3 });
   cal.gamma = BC.gammaIndex(Object.assign({}, res, { S: cal.C }), st.gamma);
+  cal.ssim = BC.ssimMap(Object.assign({}, res, { S: cal.C }), st.ssim);
   st.calRes = cal; st.calFor = res; st.calErr = null; return cal;
 }
 function ensureCalibration(){
@@ -1387,7 +1438,9 @@ function renderKPIs(){
     items.push(['Cut-off sharpness G', `${Number.isFinite(gm) ? gm.toFixed(2) : '–'} / ${Number.isFinite(gs) ? gs.toFixed(2) : '–'}`,
       `meas / sim at ${fmtAng(st.cut.gAt, 'R', 'L', 'V-V')}${gMin != null ? ', min ' + gMin : ''}`, ok]);
   } else items.push([`Within ±${tol}%`, (r.inTol*100).toFixed(1) + '%', 'of unmasked cells', cls(100 - r.inTol*100, 30, 60)]);
-  items.push(['Correlation r', Number.isFinite(r.r) ? r.r.toFixed(4) : '–', 'log₁₀ intensities', cls(1 - r.r, 0.01, 0.05)],
+  const sm = st.sRes && st.sRes.mean;
+  items.push(sm ? ['Mean SSIM', sm.ssim.toFixed(3), `structure ${sm.s.toFixed(3)} · r ${Number.isFinite(r.r) ? r.r.toFixed(4) : '–'} (log)`, cls(1 - sm.ssim, 0.05, 0.15)]
+      : ['Correlation r', Number.isFinite(r.r) ? r.r.toFixed(4) : '–', 'log₁₀ intensities', cls(1 - r.r, 0.01, 0.05)],
     cdTile(), calTile(),
     ['Test points', judged ? `${cnt('m')} / ${cnt('s')} of ${judged}` : '–', judged ? 'passing, measured / simulated' : 'no limits set for this function', judged && (cnt('m') < judged || cnt('s') < judged) ? 'bad' : '']);
   const g = gTile();
@@ -1615,6 +1668,30 @@ function gammaTableHTML(){
     rows.map((r, k) => `<tr><td${k === rows.length - 1 ? ' style="font-weight:600"' : ''}>${r[0]}</td><td class="mono">${r[1].toLocaleString('en-US')}</td><td class="mono dl ${cls(r[2])}">${pc(r[2])}</td><td class="mono">${pc(r[3])}</td><td class="mono">${Number.isFinite(r[2] - r[3]) ? '+' + ((r[2] - r[3])*100).toFixed(1) + ' pts' : '–'}</td></tr>`).join('') +
     `</tbody></table></div>`) + `<p class="interp">Mean γ ${g.mean.toFixed(3)}, 95th percentile γ ${g.p95.toFixed(3)}. <strong>Gained by DTA</strong> is the share of cells that fail on value alone but pass once a ${st.gamma.dta}° position tolerance is allowed: error that comes from small shifts in steep gradients, not from wrong intensity.${calG ? ` After calibration (Calibration tab) the gamma pass rate is ${pc(calG.pass)}.` : ''}</p>`;
 }
+const SSIM_LABEL = { ssim:'SSIM', s:'Structure s', c:'Contrast c', l:'Luminance l' };
+function figSSIM(c){
+  const r = st.res, sr = st.sRes, comp = st.ssim.comp, Z = { ssim: sr.SSIM, s: sr.S, c: sr.C, l: sr.L }[comp];
+  const mean = comp === 'ssim' ? sr.mean.ssim : sr.mean[comp];
+  const data = [{ type:'heatmap', x:r.hs, y:r.vs, z:nullify(Z), zmin:0, zmax:1, zsmooth:false,
+    colorscale:[[0, c.g3], [0.5, c.g2], [0.8, c.g1], [1, c.g0]],
+    hovertemplate:`H %{x:.2f}°  V %{y:.2f}°<br>${SSIM_LABEL[comp]} %{z:.3f}<extra></extra>`,
+    colorbar:{ title:{ text: comp === 'ssim' ? 'SSIM' : comp, side:'right', font:{ size:11, color:c.ink2 } }, thickness:12, outlinewidth:0, tickfont:{ color:c.ink2 },
+      tickvals:[0, 0.25, 0.5, 0.75, 1], ticktext:['≤ 0', '0.25', '0.5', '0.75', '1'] } }];
+  data.push(...isoTraces(c), pointsTrace(c));
+  return { data, layout: baseLayout(c, { title:{ text:`${SSIM_LABEL[comp]}, window σ ${sr.sigma}°: mean ${mean.toFixed(3)}`, font:{ size:13, color:c.ink }, x:0.01, xanchor:'left' } }) };
+}
+function ssimTableHTML(){
+  const sr = st.sRes; if (!sr || !sr.n) return '';
+  const f3 = x => Number.isFinite(x) ? x.toFixed(3) : '–', cl = x => !Number.isFinite(x) ? '' : x >= 0.95 ? '' : x >= 0.85 ? 'warn' : 'bad';
+  const rows = sr.bands.map(b => [b.name, b.n, b.ssim, b.l, b.c, b.s, b.good90]);
+  rows.push(['All evaluated cells', sr.n, sr.mean.ssim, sr.mean.l, sr.mean.c, sr.mean.s, sr.good90]);
+  const m = sr.mean, weak = [['luminance', m.l], ['contrast', m.c], ['structure', m.s]].sort((a, b) => a[1] - b[1])[0];
+  const calS = st.calRes && st.calFor === st.res && st.calRes.ssim && st.calRes.ssim.mean ? st.calRes.ssim.mean.ssim : null;
+  return card('SSIM by intensity band', `window σ ${sr.sigma}° · dynamic range ${sr.D.toFixed(1)} decades`, `<div class="tablewrap"><table><thead><tr><th>Intensity band</th><th>Cells</th><th>Mean SSIM</th><th>Luminance l</th><th>Contrast c</th><th>Structure s</th><th>Cells ≥ 0.9</th></tr></thead><tbody>` +
+    rows.map((r, k) => `<tr><td${k === rows.length - 1 ? ' style="font-weight:600"' : ''}>${r[0]}</td><td class="mono">${r[1].toLocaleString('en-US')}</td><td class="mono dl ${cl(r[2])}">${f3(r[2])}</td><td class="mono dl ${cl(r[3])}">${f3(r[3])}</td><td class="mono dl ${cl(r[4])}">${f3(r[4])}</td><td class="mono dl ${cl(r[5])}">${f3(r[5])}</td><td class="mono">${Number.isFinite(r[6]) ? (r[6]*100).toFixed(1) + '%' : '–'}</td></tr>`).join('') +
+    `</tbody></table></div>`) +
+    `<p class="interp">5th-percentile SSIM ${f3(sr.p05)}. The weakest component overall is <strong>${weak[0]}</strong> (${f3(weak[1])}). Low luminance means a level difference (aim, efficiency or scaling); low contrast means one beam is smoother than the other (blur, missing striations); low structure means the shape differs locally. Widen the window to judge larger features, narrow it for cut-off detail.${calS != null ? ` After calibration the mean SSIM is ${f3(calS)}.` : ''}</p>`;
+}
 const fmtExt = (x, edge, pos, neg) => !Number.isFinite(x) ? '–' : fmtAng(+x.toFixed(2), pos, neg, '0') + (edge ? '*' : '');
 function contourTableHTML(){
   const cd = st.cdRes || []; if (!cd.length) return '';
@@ -1661,7 +1738,8 @@ function calTableHTML(){
     ['RMS deviation', '±' + pc(c.before.rms), '±' + pc(c.after.rms)],
     ['Mean bias', fmtPct(c.before.bias), fmtPct(c.after.bias)],
     [`Within ±${tol}%`, pc(c.before.inTol), pc(c.after.inTol)],
-    [`Gamma pass ${st.gamma.dIPct}% / ${st.gamma.dta}°`, g0 ? pc(g0.pass) : '–', g1 ? pc(g1.pass) : '–']
+    [`Gamma pass ${st.gamma.dIPct}% / ${st.gamma.dta}°`, g0 ? pc(g0.pass) : '–', g1 ? pc(g1.pass) : '–'],
+    [`Mean SSIM (σ ${st.ssim.sigma}°)`, st.sRes && st.sRes.mean ? st.sRes.mean.ssim.toFixed(3) : '–', c.ssim && c.ssim.mean ? c.ssim.mean.ssim.toFixed(3) : '–']
   ];
   const sv = c.sv, sh = c.sh, stray = c.haloPct + c.floorPct;
   const msgs = [];
@@ -1686,6 +1764,7 @@ function renderViewbar(){
   if (v === 'ratio') vb.innerHTML = `<label class="f">Colour range<select id="vbSpan"><option value="0.32">×0.8 – ×1.25</option><option value="0.58">×0.67 – ×1.5</option><option value="1">×0.5 – ×2</option><option value="2">×0.25 – ×4</option></select></label><label class="f">Iso lines (cd)<input id="vbLev" type="text" placeholder="auto"></label>`;
   else if (v === 'iso' || v === 'overlay') vb.innerHTML = `<label class="f">Iso lines (cd)<input id="vbLev" type="text" placeholder="auto"></label>`;
   else if (v === 'gamma') vb.innerHTML = `<label class="f">ΔI (%)<input id="gmI" type="number" step="1" min="1"></label><label class="f">DTA (°)<input id="gmD" type="number" step="0.05" min="0.01"></label><label class="f">Normalisation<select id="gmN"><option value="local">Local (% of measured)</option><option value="global">Global (% of Imax)</option></select></label><label class="f">Evaluate above (% Imax)<input id="gmT" type="number" step="0.5" min="0"></label><label class="f">Iso lines (cd)<input id="vbLev" type="text" placeholder="auto"></label>`;
+  else if (v === 'ssim') vb.innerHTML = `<label class="f">Show<select id="ssC"><option value="ssim">SSIM (l · c · s)</option><option value="s">Structure s</option><option value="c">Contrast c</option><option value="l">Luminance l</option></select></label><label class="f">Window σ (°)<input id="ssW" type="number" step="0.05" min="0.05"></label><label class="f">Iso lines (cd)<input id="vbLev" type="text" placeholder="auto"></label>`;
   else if (v === 'calib') vb.innerHTML = `<span class="hint" style="margin:0">Fits blur, stray light and aim to the current aligned and scaled simulation. Change alignment, scaling or the window on the left and the fit reruns.</span>`;
   else if (v === 'cutoff') vb.innerHTML = `<label class="f">Scans at H (°)<input id="cbScans" type="text"></label><label class="f">G check at H (°)<input id="cbGAt" type="number" step="0.5"></label><label class="f">Min G<input id="cbGMin" type="number" step="0.01" placeholder="none"></label><label class="f">Linearity max (°)<input id="cbLin" type="number" step="0.05" placeholder="none"></label><label class="f">Simulation<select id="cbAl"><option value="raw">As simulated</option><option value="al">Aligned</option></select></label>`;
   else vb.innerHTML = `<label class="f">Horizontal scan at V (°)<input id="vbSV" type="number" step="0.01"></label><label class="f">Vertical scan at H (°)<input id="vbSH" type="number" step="0.01"></label><label class="ck"><input type="checkbox" id="vbLog">Log scale</label><span class="hint" style="margin:0">Dotted lines mark the steepest gradient (cut-off) on the vertical scan.</span>`;
@@ -1714,6 +1793,11 @@ function renderViewbar(){
     };
     ['gmI', 'gmD', 'gmN', 'gmT'].forEach(id => $(id).addEventListener('change', upd));
   }
+  if (v === 'ssim'){
+    $('ssC').value = st.ssim.comp; $('ssW').value = st.ssim.sigma;
+    $('ssC').addEventListener('change', () => { st.ssim.comp = $('ssC').value; renderView(); });
+    $('ssW').addEventListener('change', () => { const w = parseFloat($('ssW').value); if (w > 0){ st.ssim.sigma = w; recomputeSSIM(); renderKPIs(); renderView(); } });
+  }
   const span = $('vbSpan'); if (span){ span.value = String(st.ratioSpan); span.onchange = () => { st.ratioSpan = +span.value; renderView(); }; }
   const lev = $('vbLev'); if (lev){ lev.value = st.isoLevels; lev.onchange = () => { st.isoLevels = lev.value; recomputeContours(); renderKPIs(); renderView(); }; }
   const sv = $('vbSV'); if (sv){ sv.value = st.sliceV; sv.onchange = () => { st.sliceV = parseFloat(sv.value) || 0; renderView(); }; }
@@ -1725,7 +1809,7 @@ function renderView(){
   if (!hasPlotly){ $('plots').innerHTML = '<div class="plotbox" style="padding:16px">Charts are unavailable because Plotly could not be loaded: the bundled copy (vendor/plotly.min.js) was not found next to this page and the public CDNs were blocked. Keep the vendor folder beside index.html, or open the hosted page. Statistics and the tables still work.</div>'; return; }
   const c = themeColors(false), v = st.view;
   document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.view === v)));
-  $('viewTitle').textContent = { ratio:'Ratio map', iso:'Isocandela', overlay:'Contour overlay', slices:'Intensity scans', cutoff:'Cut-off', gamma:'Gamma index', calib:'Calibration' }[v] || '';
+  $('viewTitle').textContent = { ratio:'Ratio map', iso:'Isocandela', overlay:'Contour overlay', slices:'Intensity scans', cutoff:'Cut-off', gamma:'Gamma index', ssim:'Structural similarity (SSIM)', calib:'Calibration' }[v] || '';
   $('plotLegend').hidden = !['overlay', 'slices', 'cutoff'].includes(v);
   if (!$('viewbar').dataset.view || $('viewbar').dataset.view !== v){ $('viewbar').dataset.view = v; renderViewbar(); }
   let note = '';
@@ -1742,6 +1826,11 @@ function renderView(){
     const [d] = plotDivs(1); const f = figGamma(c); Plotly.react(d, f.data, f.layout, CFG);
     note = 'Green: passes (γ ≤ 1), darker green is closer to 1. Amber to red: fails, capped at γ = 2. Grey lines are measured isocandelas.';
     $('viewExtra').innerHTML = gammaTableHTML(); }
+  else if (v === 'ssim'){
+    if (!st.sRes || !st.sRes.n){ plotDivs(0); $('plotNote').textContent = 'No cells above the mask threshold to evaluate.'; return; }
+    const [d] = plotDivs(1); const f = figSSIM(c); Plotly.react(d, f.data, f.layout, CFG);
+    note = 'Dark: the two patterns agree locally. Green to amber to red: increasingly different. Grey lines are measured isocandelas.';
+    $('viewExtra').innerHTML = ssimTableHTML(); }
   else if (v === 'calib'){
     if (!(st.calRes && st.calFor === st.res)){
       plotDivs(0);
@@ -1838,6 +1927,12 @@ function pointsCSV(){
     g.bands.forEach(b => out.push([`"${b.name}"`, b.n, (100*b.pass/b.n).toFixed(2), (100*b.rpass/b.n).toFixed(2), `"${st.gamma.dIPct}% / ${st.gamma.dta} deg ${st.gamma.norm}"`].join(',')));
     out.push(['"All"', g.n, (100*g.pass).toFixed(2), (100*g.ratioPass).toFixed(2), ''].join(','));
   }
+  const sr = st.sRes;
+  if (sr && sr.n){
+    out.push('', `ssim_band,cells,mean_ssim,luminance,contrast,structure,share_ssim_ge_0.9,window_sigma_deg`);
+    sr.bands.forEach(b => out.push([`"${b.name}"`, b.n, b.ssim.toFixed(4), b.l.toFixed(4), b.c.toFixed(4), b.s.toFixed(4), b.good90.toFixed(4), sr.sigma].join(',')));
+    out.push(['"All"', sr.n, sr.mean.ssim.toFixed(4), sr.mean.l.toFixed(4), sr.mean.c.toFixed(4), sr.mean.s.toFixed(4), sr.good90.toFixed(4), sr.sigma].join(','));
+  }
   if (st.cdRes && st.cdRes.length){
     out.push('', 'iso_level_cd,mean_shift_deg,p95_deg,max_deg,signed_sim_vs_meas_deg,area_ratio_sim_meas,left_meas,left_sim,right_meas,right_sim,down_meas,down_sim,up_meas,up_sim');
     const f = x => Number.isFinite(x) ? (+x.toFixed(4)) : '';
@@ -1849,7 +1944,8 @@ function pointsCSV(){
     out.push('', 'calibration_parameter,value');
     [['sigma_h_deg', c.sh], ['sigma_v_deg', c.sv], ['sigma_h_cost_rise', c.riseH], ['sigma_v_cost_rise', c.riseV], ['aim_correction_h_deg', c.ox], ['aim_correction_v_deg', c.oy],
      ['gain', c.a], ['halo_pct_imax', c.haloPct], ['floor_pct_imax', c.floorPct], ['rms_before', c.before.rms], ['rms_after', c.after.rms],
-     ['gamma_pass_before', g ? g.pass : NaN], ['gamma_pass_after', c.gamma ? c.gamma.pass : NaN]].forEach(([k, v]) => out.push(`${k},${Number.isFinite(v) ? +v.toFixed(5) : ''}`));
+     ['gamma_pass_before', g ? g.pass : NaN], ['gamma_pass_after', c.gamma ? c.gamma.pass : NaN],
+     ['ssim_before', sr && sr.mean ? sr.mean.ssim : NaN], ['ssim_after', c.ssim && c.ssim.mean ? c.ssim.mean.ssim : NaN]].forEach(([k, v]) => out.push(`${k},${Number.isFinite(v) ? +v.toFixed(5) : ''}`));
   }
   return out.join('\n');
 }
@@ -1885,6 +1981,13 @@ ${im(cT, 'Cut-off line trace; dotted lines are the scan positions, diamonds the 
     gHTML = `<h2>Gamma index</h2><p class="sub" style="margin:0 0 8px">Criteria ${st.gamma.dIPct}% / ${st.gamma.dta}° (${st.gamma.norm}), evaluated above ${st.gamma.thrPct}% of measured Imax. Mean γ ${g.mean.toFixed(3)}, 95th percentile ${g.p95.toFixed(3)}.</p>
 <table><thead><tr><th>Intensity band</th><th>Cells</th><th>Gamma pass</th><th>Ratio-only pass</th></tr></thead><tbody>${g.bands.map(b => `<tr><td>${b.name}</td><td>${b.n}</td><td>${pc(b.pass/b.n)}</td><td>${pc(b.rpass/b.n)}</td></tr>`).join('')}<tr><td><strong>All</strong></td><td>${g.n}</td><td><strong>${pc(g.pass)}</strong></td><td>${pc(g.ratioPass)}</td></tr></tbody></table>${im(gi, 'Gamma map: green passes, amber to red fails (capped at 2)')}`;
   }
+  let sHTML = '';
+  if (st.sRes && st.sRes.n){
+    const saveComp = st.ssim.comp; st.ssim.comp = 'ssim'; const si = await img(figSSIM(c)); st.ssim.comp = saveComp;
+    const sr = st.sRes, f = x => x.toFixed(3);
+    sHTML = `<h2>Structural similarity (SSIM)</h2><p class="sub" style="margin:0 0 8px">On log₁₀(I / mask threshold), Gaussian window σ ${sr.sigma}°, dynamic range ${sr.D.toFixed(1)} decades. 5th-percentile SSIM ${f(sr.p05)}.</p>
+<table><thead><tr><th>Intensity band</th><th>Cells</th><th>Mean SSIM</th><th>Luminance</th><th>Contrast</th><th>Structure</th><th>Cells ≥ 0.9</th></tr></thead><tbody>${sr.bands.map(b => `<tr><td>${b.name}</td><td>${b.n}</td><td>${f(b.ssim)}</td><td>${f(b.l)}</td><td>${f(b.c)}</td><td>${f(b.s)}</td><td>${(b.good90*100).toFixed(1)}%</td></tr>`).join('')}<tr><td><strong>All</strong></td><td>${sr.n}</td><td><strong>${f(sr.mean.ssim)}</strong></td><td>${f(sr.mean.l)}</td><td>${f(sr.mean.c)}</td><td>${f(sr.mean.s)}</td><td>${(sr.good90*100).toFixed(1)}%</td></tr></tbody></table>${im(si, 'SSIM map: dark agrees, green to red increasingly different')}`;
+  }
   if (st.cdRes && st.cdRes.length){
     const f3 = x => Number.isFinite(x) ? x.toFixed(3) + '°' : '–';
     cdHTML = `<h3 style="font-size:14px;margin:14px 0 6px">Contour displacement</h3><table><thead><tr><th>Level</th><th>Mean</th><th>95%</th><th>Max</th><th>Sim vs meas</th><th>Area sim ÷ meas</th><th>Left m / s</th><th>Right m / s</th><th>Down m / s</th><th>Up m / s</th></tr></thead><tbody>${st.cdRes.map(cd => {
@@ -1899,7 +2002,7 @@ ${im(cT, 'Cut-off line trace; dotted lines are the scan positions, diamonds the 
 <table><thead><tr><th>Parameter</th><th>Value</th><th>Note</th></tr></thead><tbody>${calRows().map(x => `<tr><td>${x[0]}</td><td>${x[1]}</td><td>${x[2]}</td></tr>`).join('')}</tbody></table>
 <table style="margin-top:10px"><thead><tr><th>Agreement</th><th>Simulation as is</th><th>Calibrated</th></tr></thead><tbody>
 <tr><td>RMS deviation</td><td>±${pc(cal.before.rms)}</td><td>±${pc(cal.after.rms)}</td></tr><tr><td>Mean bias</td><td>${fmtPct(cal.before.bias)}</td><td>${fmtPct(cal.after.bias)}</td></tr>
-<tr><td>Within ±${o.tolPct}%</td><td>${pc(cal.before.inTol)}</td><td>${pc(cal.after.inTol)}</td></tr><tr><td>Gamma pass</td><td>${st.gRes ? pc(st.gRes.pass) : '–'}</td><td>${cal.gamma ? pc(cal.gamma.pass) : '–'}</td></tr></tbody></table>
+<tr><td>Within ±${o.tolPct}%</td><td>${pc(cal.before.inTol)}</td><td>${pc(cal.after.inTol)}</td></tr><tr><td>Gamma pass</td><td>${st.gRes ? pc(st.gRes.pass) : '–'}</td><td>${cal.gamma ? pc(cal.gamma.pass) : '–'}</td></tr><tr><td>Mean SSIM</td><td>${st.sRes && st.sRes.mean ? st.sRes.mean.ssim.toFixed(3) : '–'}</td><td>${cal.ssim && cal.ssim.mean ? cal.ssim.mean.ssim.toFixed(3) : '–'}</td></tr></tbody></table>
 <div class="grid">${im(b1, 'Before calibration')}${im(b2, 'After calibration')}</div>${im(b3, 'Vertical scan: measured, simulated, calibrated')}`;
   } catch (e){ calHTML = `<h2>Calibration: blur and stray light</h2><p class="sub">Fit not available: ${esc(e.message)}</p>`; }
   const kv = [['Lamp function', esc(FUNCS[st.func].label)], ['Measured file', esc(st.meas.name) + ' (' + st.meas.format + (st.meas.typeLabel ? ', ' + esc(st.meas.typeLabel) : '') + (o.mirM ? ', mirrored' : '') + ')'],
@@ -1912,6 +2015,7 @@ ${im(cT, 'Cut-off line trace; dotted lines are the scan positions, diamonds the 
     ['RMS deviation', `±${(rmsPct*100).toFixed(1)}%, mean bias ${fmtPct(biasPct)} over ${r.n} cells above ${o.maskPct}% Imax`],
     [`Cells within ±${o.tolPct}%`, (r.inTol*100).toFixed(1) + '%'], ['Correlation r (log₁₀)', Number.isFinite(r.r) ? r.r.toFixed(4) : '–'],
     ['Gamma pass rate', st.gRes && st.gRes.n ? `${(st.gRes.pass*100).toFixed(1)}% at ${st.gamma.dIPct}% / ${st.gamma.dta}° (${st.gamma.norm})` : '–'],
+    ['Mean SSIM', st.sRes && st.sRes.mean ? `${st.sRes.mean.ssim.toFixed(3)} (luminance ${st.sRes.mean.l.toFixed(3)}, contrast ${st.sRes.mean.c.toFixed(3)}, structure ${st.sRes.mean.s.toFixed(3)}; window σ ${st.sRes.sigma}°)` : '–'],
     ['Mean contour shift', (() => { const ok = (st.cdRes || []).filter(x => x.ok); return ok.length ? (ok.reduce((a, x) => a + x.mean, 0)/ok.length).toFixed(3) + '° over ' + ok.length + ' iso levels' : '–'; })()],
     ['Blur σ H / V', st.calRes && st.calFor === r ? `${st.calRes.sh.toFixed(3)}° / ${st.calRes.sv.toFixed(3)}°, stray light ${(st.calRes.haloPct + st.calRes.floorPct).toFixed(2)}% Imax` : '–']];
   const ptRows = r.pts.map(p => `<tr><td>${esc(p.name)}</td><td>${fmtPos(p.h, p.v)}</td><td>${fmtCd(p.m)}</td><td>${fmtCd(p.s)}</td><td>${fmtPct(p.delta)}</td><td>${limText(p)}</td><td class="${p.jm.st}">${p.jm.st}</td><td class="${p.js.st}">${p.js.st}</td></tr>`).join('');
@@ -1922,6 +2026,7 @@ ${im(cT, 'Cut-off line trace; dotted lines are the scan positions, diamonds the 
 <h2>Test points</h2><table><thead><tr><th>Point</th><th>Position</th><th>Measured cd</th><th>Simulated cd</th><th>Meas vs sim</th><th>Limit</th><th>Measured</th><th>Simulated</th></tr></thead><tbody>${ptRows || '<tr><td colspan="8">No test points defined.</td></tr>'}</tbody></table>
 ${cutHTML}
 ${gHTML}
+${sHTML}
 ${calHTML}
 <h2>Ratio map</h2>${im(ratio, 'Measured ÷ simulated on a log₂ scale. Orange: measurement brighter, blue: darker.')}
 <h2>Isocandela overlay</h2>${im(over, 'Measured solid, simulated dashed.')}${cdHTML}
