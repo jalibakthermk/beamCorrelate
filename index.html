@@ -308,7 +308,7 @@ footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);paddin
         <summary><span class="st">Test points</span><span class="sv" id="svTp"></span></summary>
         <div class="sb">
           <label class="f">Preset
-            <select id="tpPreset"><option value="func">Defaults for this function</option><option value="custom">Custom</option></select>
+            <select id="tpPreset"><option value="func">Defaults for this function</option><option value="led">Low beam, LED module limit (50L/50R max 18 500 cd)</option><option value="custom">Custom</option></select>
           </label>
           <textarea id="tpJson" spellcheck="false" aria-label="Test points JSON"></textarea>
           <div class="btnrow"><button class="btn" id="tpApply" type="button">Apply points</button></div>
@@ -1195,6 +1195,7 @@ const ptName = (h, v) => {
 const gridPts = rows => rows.flatMap(([v, hs]) => hs.map(h => ({ name: ptName(h, v), h, v })));
 const R112B = [
   { name:'B50L', h:-3.43, v: 0.57, max:350 },
+  { name:'BR',   h: 2.5,  v: 1.0,  max:1750 },
   { name:'75R',  h: 1.15, v:-0.57, min:10100 },
   { name:'75L',  h:-3.43, v:-0.57, max:10600 },
   { name:'50L',  h:-3.43, v:-0.86, max:13200 },
@@ -1203,14 +1204,19 @@ const R112B = [
   { name:'25L',  h:-9,    v:-1.72, min:1700 },
   { name:'25R',  h: 9,    v:-1.72, min:1700 }
 ];
-const swapLR = s => s.replace(/(\d)L\b/g, '$1#').replace(/(\d)R\b/g, '$1L').replace(/(\d)#/g, '$1R');
+const swapLR = s => s === 'BR' ? 'BL' : s.replace(/(\d)L\b/g, '$1#').replace(/(\d)R\b/g, '$1L').replace(/(\d)#/g, '$1R');
+/* R112 footnote (***): with LED modules and electronic control gear, the 50L point may reach 18 500 cd instead of 13 200 cd */
+const R112B_LED = R112B.map(p => p.name === '50L' ? { ...p, max:18500 } : p);
+const mirrorLHT = set => set.map(p => ({ ...p, name: swapLR(p.name), h: p.h === 0 ? 0 : -p.h }));
 const PRESETS = {
   lb_rht: R112B,
-  lb_lht: R112B.map(p => ({ ...p, name: swapLR(p.name), h: p.h === 0 ? 0 : -p.h })),
+  lb_lht: mirrorLHT(R112B),
+  lb_rht_led: R112B_LED,
+  lb_lht_led: mirrorLHT(R112B_LED),
   hb: [
     { name:'HV', h:0, v:0, minRel:0.8 },
-    { name:'2.25L', h:-2.25, v:0, min:20250 }, { name:'2.25R', h:2.25, v:0, min:20250 },
-    { name:'9L', h:-9, v:0, min:5100 }, { name:'9R', h:9, v:0, min:5100 }
+    { name:'2.5L', h:-2.5, v:0, min:20300 }, { name:'2.5R', h:2.5, v:0, min:20300 },
+    { name:'5L', h:-5, v:0, min:5100 }, { name:'5R', h:5, v:0, min:5100 }
   ],
   fog: gridPts([[1, [-10, 0, 10]], [-3, [-26, -10, 0, 10, 26]]]),
   sig20: gridPts([[10, [-10, -5, 0, 5, 10]], [5, [-20, -10, 0, 10, 20]], [0, [-20, -10, -5, 0, 5, 10, 20]], [-5, [-20, -10, 0, 10, 20]], [-10, [-10, -5, 0, 5, 10]]]),
@@ -1236,12 +1242,12 @@ const SIG_NOTE = 'Standard 10°/20° grid positions only. Add your limits in the
 const FUNCS = {
   lb_rht: { label:'Low beam (RHT)', win:W30, step:0.1, pts:'lb_rht', demo:['low'], slice:[2.5, -0.86],
     cut:{ side:'L', scans:[-1.5, -2.5, -3.5], gAt:-2.5, gMin:0.13, linTol:0.2 },
-    note:'ECE R112 class B points. Cut-off scans at 1.5L, 2.5L and 3.5L.' },
+    note:'ECE R112 class B points (50L ≤ 13 200 cd; pick the LED preset for 18 500 cd). Cut-off scans at 1.5L, 2.5L and 3.5L.' },
   lb_lht: { label:'Low beam (LHT)', win:W30, step:0.1, pts:'lb_lht', demo:['lowLHT'], slice:[-2.5, -0.86],
     cut:{ side:'R', scans:[1.5, 2.5, 3.5], gAt:2.5, gMin:0.13, linTol:0.2 },
-    note:'R112 class B points mirrored for left-hand traffic. Cut-off scans at 1.5R, 2.5R and 3.5R.' },
+    note:'R112 class B points mirrored for left-hand traffic (50R ≤ 13 200 cd; pick the LED preset for 18 500 cd). Cut-off scans at 1.5R, 2.5R and 3.5R.' },
   hb: { label:'High beam', win:W30, step:0.1, pts:'hb', demo:['high'], slice:[0, 0],
-    note:'Points: HV ≥ 80% of Imax, 20 250 cd to 2.25° and 5 100 cd to 9° either side.' },
+    note:'ECE R112 class B: HV ≥ 80% of Imax, 20 300 cd at 2.5° and 5 100 cd at 5° either side. Imax must be 40 500 to 215 000 cd (check on the Imax tile).' },
   fog: { label:'Front fog lamp', win:W30, step:0.1, pts:'fog', demo:['fog'], slice:[0, -3],
     cut:{ side:'both', scans:[-3.5, -2.5, -1.5, 1.5, 2.5, 3.5], gAt:-2.5, gMin:null, linTol:null },
     note:'Grid positions only. Flat cut-off scanned on both sides of V-V; set a minimum G if your requirement has one.' },
@@ -1877,7 +1883,7 @@ function renderTable(){
   const tc = $('tpCount');
   tc.className = 'cnt' + (judged.length ? (failM || failS ? ' f' : ' p') : '');
   tc.textContent = !judged.length ? (r.pts.length ? `${r.pts.length} points, no limits` : '') : (failM || failS) ? `${failM} measured · ${failS} simulated failing` : `all ${judged.length} pass`;
-  $('tpNote').textContent = ($('tpPreset').value === 'custom' ? 'custom points' : FUNCS[st.func].label) + ' · margin to limit beside each verdict';
+  $('tpNote').textContent = ($('tpPreset').value === 'custom' ? 'custom points' : FUNCS[st.func].label + ($('tpPreset').value === 'led' ? ' (LED module limits)' : '')) + ' · margin to limit beside each verdict';
   $('tpTable').innerHTML = `<thead><tr><th>Point</th><th class="lft">Position</th><th>Measured cd</th><th>Simulated cd</th><th>Meas vs sim</th><th>Limit</th><th>Measured</th><th>Simulated</th></tr></thead><tbody>` +
     (r.pts.length ? r.pts.map(p => `<tr><td><strong>${p.name}</strong></td><td class="lft">${fmtPos(p.h, p.v)}</td><td class="mono">${fmtCd(p.m)}</td><td class="mono">${fmtCd(p.s)}</td><td class="mono dl ${dcls(p.delta)}">${fmtPct(p.delta)}</td><td class="mono">${lim(p)}</td><td>${pill(p.jm)} <span class="mono" style="color:var(--ink-2)">${margin(p.jm)}</span></td><td>${pill(p.js)} <span class="mono" style="color:var(--ink-2)">${margin(p.js)}</span></td></tr>`).join('')
       : '<tr><td colspan="8" style="text-align:left;color:var(--ink-2)">No test points defined.</td></tr>') + '</tbody>';
@@ -2057,7 +2063,7 @@ $('btnSwap').addEventListener('click', () => {
 });
 ['hmin','hmax','vmin','vmax','step','mirMeas','mirSim','alignMode','dh','dv','fitRange','scaleMode','k','maskPct','tolPct'].forEach(id => $(id).addEventListener('change', schedule));
 document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => { st.view = t.dataset.view; renderView(); }));
-$('tpPreset').addEventListener('change', () => { const key = $('tpPreset').value === 'func' ? FUNCS[st.func].pts : 'custom'; setPoints((BC.PRESETS[key] || []).map(p => Object.assign({}, p))); schedule(); });
+$('tpPreset').addEventListener('change', () => { const v = $('tpPreset').value, key = v === 'func' ? FUNCS[st.func].pts : v === 'led' ? (FUNCS[st.func].pts === 'lb_lht' ? 'lb_lht_led' : FUNCS[st.func].pts === 'lb_rht' ? 'lb_rht_led' : FUNCS[st.func].pts) : 'custom'; setPoints((BC.PRESETS[key] || []).map(p => Object.assign({}, p))); schedule(); });
 $('func').addEventListener('change', () => applyFunction($('func').value, true));
 $('tpApply').addEventListener('click', applyPointsJson);
 $('exPts').addEventListener('click', () => { if (st.res) saveFile(`beam_correlate_results_${stamp()}.csv`, pointsCSV()); });
