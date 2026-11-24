@@ -3,52 +3,47 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<style>html{color-scheme:light}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}</style>
+<style>body{margin:0}img{max-width:100%}</style>
 <title>Beam Correlate</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"%3E%3Cdefs%3E%3CclipPath id="bcA"%3E%3Cpath d="M2 25.5 H19.5 L27.5 19 H46 V46 H2 Z"/%3E%3C/clipPath%3E%3CclipPath id="bcB"%3E%3Cpath d="M2 22 H23.5 L31.5 15.5 H46 V46 H2 Z"/%3E%3C/clipPath%3E%3C/defs%3E%3Crect x="1.5" y="1.5" width="45" height="45" rx="9" fill="#0d151d"/%3E%3Cg clip-path="url%28#bcA%29"%3E%3Cellipse cx="21.5" cy="29.5" rx="19" ry="9.5" fill="#1c5c8c"/%3E%3Cellipse cx="22.5" cy="29" rx="13" ry="6.6" fill="#179498"/%3E%3Cellipse cx="23.5" cy="28.5" rx="8.4" ry="4.4" fill="#d6d046"/%3E%3Cellipse cx="24" cy="28.1" rx="4.3" ry="2.5" fill="#e24e3a"/%3E%3C/g%3E%3Cg clip-path="url%28#bcB%29" fill="none" stroke="#9fd3ff" stroke-width="1.6"%3E%3Cellipse cx="25.5" cy="25.5" rx="19" ry="9.5"/%3E%3Cellipse cx="27.5" cy="24.6" rx="8.4" ry="4.4"/%3E%3C/g%3E%3Cpath d="M4.5 25.5 H19.5 L27.5 19 H43.5" fill="none" stroke="#ffffff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/%3E%3Cpath d="M4.5 22 H23.5 L31.5 15.5 H43.5" fill="none" stroke="#9fd3ff" stroke-width="1.8" stroke-dasharray="3 2" stroke-linejoin="round"/%3E%3C/svg%3E">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@600;700&family=Source+Sans+3:wght@400;600&display=swap">
+<meta name="theme-color" content="#0a0f2c">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+
+<!-- beamKit: shared design framework for the lighting tools (https://jalibakthermk.github.io/beamkit/) -->
+<link rel="stylesheet" href="https://jalibakthermk.github.io/beamkit/beamkit.css">
+<script>try{var t=localStorage.getItem('theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
+<script src="https://jalibakthermk.github.io/beamkit/beamkit.js" defer></script>
 <style>
 /* Bench layout (shared with Beam Synth): a sticky control rail with export pinned to its foot; results on the right read
    top-down as verdict and figures, analysis views on dark photometric panels, then tables. */
+/* Colour and font names mapped onto the shared beamKit tokens (light and dark come from beamkit.css).
+   Fallback values keep the page usable if beamkit.css cannot load (e.g. offline). */
 :root{
-  --bg:#f3f5f6; --surface:#ffffff; --sunk:#e9edf0; --ink:#15212b; --muted:#55656f; --line:#d5dce1; --line-soft:#e6ebee;
-  --accent:#9a5600; --accent-ink:#ffffff; --accent-soft:#f7e9d3;
-  --pass:#1f7a45; --fail:#c0332a; --warn:#8a5d00; --info:#6b7b88;
+  --bg:var(--cds-background,#f2f4f8); --surface:var(--cds-layer-01,#fff); --sunk:var(--cds-layer-02,#e8ebf1);
+  --ink:var(--cds-text-primary,#161616); --muted:var(--cds-text-secondary,#525a66);
+  --line:var(--cds-border-subtle,#d5d9e0); --line-soft:var(--cds-grid,#e4e7ec);
+  --accent:var(--cds-button-primary,#0f62fe); --accent-ink:#ffffff; --accent-soft:var(--cds-info-bg,#edf5ff);
+  --pass:var(--cds-ok,#24a148); --fail:var(--cds-bad,#da1e28); --good:var(--cds-ok,#24a148); --bad:var(--cds-bad,#da1e28);
+  --info:var(--cds-text-helper,#6f7682); --warn:var(--cds-warn-text,#8e6a00);
+  --f-display:var(--font-display,"Arial Narrow",sans-serif);
+  --f-body:var(--font-body,"Segoe UI",system-ui,sans-serif);
+  --f-mono:var(--font-mono,ui-monospace,monospace);
   --meas:#c2410c; --sim:#2563eb;
   --plot-bg:#0d151d; --plot-ink:#c7d4de; --plot-dim:#8494a1;
-  --f-display:"Saira Semi Condensed","Arial Narrow",sans-serif;
-  --f-body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
-  --f-mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
   /* aliases used by generated markup */
-  --ink-2:var(--muted); --panel:var(--surface); --good:var(--pass); --bad:var(--fail);
+  --ink-2:var(--muted); --panel:var(--surface);
 }
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#0b1117; --surface:#121b23; --sunk:#0c141b; --ink:#e3e9ee; --muted:#93a3af; --line:#25343f; --line-soft:#1b2832;
-  --accent:#f0a43a; --accent-ink:#1b1206; --accent-soft:#33260f;
-  --pass:#4cc27a; --fail:#ff6b5d; --warn:#e2b04a; --info:#8c9daa;
-  --meas:#ff9a5a; --sim:#7cc4ff; color-scheme:dark;}}
-:root[data-theme="dark"]{
-  --bg:#0b1117; --surface:#121b23; --sunk:#0c141b; --ink:#e3e9ee; --muted:#93a3af; --line:#25343f; --line-soft:#1b2832;
-  --accent:#f0a43a; --accent-ink:#1b1206; --accent-soft:#33260f;
-  --pass:#4cc27a; --fail:#ff6b5d; --warn:#e2b04a; --info:#8c9daa;
-  --meas:#ff9a5a; --sim:#7cc4ff; color-scheme:dark;}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--meas:#ff9a5a; --sim:#7cc4ff}}
+:root[data-theme="dark"]{--meas:#ff9a5a; --sim:#7cc4ff}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;font-variant-numeric:tabular-nums;
-  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 40px}
-.wrap{max-width:1500px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;font-variant-numeric:tabular-nums;margin:0}
 .bench{display:grid;grid-template-columns:372px minmax(0,1fr);gap:20px;align-items:start}
 
 /* ---- control rail ---- */
-aside{background:var(--surface);border:1px solid var(--line);border-radius:10px;min-width:0;display:flex;flex-direction:column;
-  position:sticky;top:max(12px,env(safe-area-inset-top,0px));max-height:calc(100vh - 24px);overflow:hidden}
-aside header{padding:12px 14px;border-bottom:1px solid var(--line)}
-.brand{display:flex;align-items:center;gap:10px}
-.logo{width:34px;height:34px;flex:none}
-h1{font-family:var(--f-display);font-weight:700;font-size:22px;letter-spacing:.01em;margin:0;line-height:1}
-.tag{font-size:13px;color:var(--muted);margin:3px 0 0;line-height:1.2}
+aside{background:var(--surface);border:1px solid var(--line);border-radius:0;min-width:0;display:flex;flex-direction:column;
+  position:sticky;top:64px;max-height:calc(100vh - 80px);overflow:hidden}
 .rail-body{position:relative;overflow-y:auto;overscroll-behavior:contain;padding:14px 14px 4px;display:flex;flex-direction:column;gap:14px;min-height:0}
 .rail-foot{border-top:1px solid var(--line);padding:12px 14px;display:flex;flex-direction:column;gap:8px;background:var(--surface)}
 fieldset{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;min-width:0}
@@ -56,7 +51,7 @@ legend{padding:0;font-weight:600;font-size:14.5px;margin-bottom:2px}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
 label.f{display:flex;flex-direction:column;gap:4px;font-size:13.5px;color:var(--muted);min-width:0}
-input,select,textarea{font:15px var(--f-body);font-variant-numeric:tabular-nums;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:5px;padding:7px 9px;width:100%;min-width:0}
+input,select,textarea{font:15px var(--f-body);font-variant-numeric:tabular-nums;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:0;padding:7px 9px;width:100%;min-width:0}
 input:hover,select:hover,textarea:hover{border-color:var(--muted)}
 input::placeholder,textarea::placeholder{color:var(--muted);opacity:.8}
 textarea{font:12px/1.5 var(--f-mono);resize:vertical;white-space:pre;overflow:auto;background:var(--sunk);min-height:170px}
@@ -64,7 +59,7 @@ input:disabled{opacity:.55}
 input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 input[type=checkbox]{width:17px;height:17px;accent-color:var(--accent);flex:none;padding:0}
 .btnrow{display:flex;flex-wrap:wrap;gap:6px}
-.btn{font:600 14px var(--f-body);border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:5px;padding:7px 12px;cursor:pointer}
+.btn{font:600 14px var(--f-body);border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:0;padding:7px 12px;cursor:pointer}
 .btn:hover{border-color:var(--muted)}
 .btnrow .btn{flex:1}
 .note{font-size:13px;line-height:1.45;color:var(--muted);margin:0;max-width:68ch}
@@ -74,7 +69,7 @@ input[type=checkbox]{width:17px;height:17px;accent-color:var(--accent);flex:none
 .ds-h{display:flex;align-items:center;gap:8px;font-weight:600;font-size:14.5px}
 .sw{width:20px;height:0;border-top:3px solid var(--meas);flex:none}
 .sw.sim{border-top:3px dashed var(--sim)}
-.drop{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;border:1.5px dashed var(--line);border-radius:7px;padding:10px;cursor:pointer;background:var(--sunk);text-align:center}
+.drop{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;border:1.5px dashed var(--line);border-radius:0;padding:10px;cursor:pointer;background:var(--sunk);text-align:center}
 .drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-soft)}
 .drop:focus-within{outline:2px solid var(--accent);outline-offset:1px}
 .drop input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
@@ -94,7 +89,7 @@ details.sec>summary:hover .st{color:var(--accent)}
 .sv{font-size:13px;color:var(--muted);margin-left:auto;text-align:right;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 details.sec[open] .sv{visibility:hidden}
 .sb{display:flex;flex-direction:column;gap:10px;padding:2px 0 14px}
-.go{font:700 17px var(--f-display);letter-spacing:.02em;background:var(--accent);color:var(--accent-ink);border:0;border-radius:7px;padding:11px;cursor:pointer;width:100%}
+.go{font:700 17px var(--f-display);letter-spacing:.02em;background:var(--accent);color:var(--accent-ink);border:0;border-radius:0;padding:11px;cursor:pointer;width:100%}
 .go:hover{filter:brightness(1.08)}
 .go:disabled{opacity:.6;cursor:progress;filter:none}
 .msg{font-size:13.5px;color:var(--muted);margin:0}
@@ -105,7 +100,7 @@ details.sec[open] .sv{visibility:hidden}
 
 /* ---- results ---- */
 main{display:flex;flex-direction:column;gap:20px;min-width:0}
-.summary{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.summary{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));background:var(--surface);border:1px solid var(--line);border-radius:0;overflow:hidden}
 .kv{grid-column:span 2;padding:11px 14px 12px;min-width:0;border-right:1px solid var(--line-soft);border-top:1px solid var(--line-soft);margin:-1px -1px 0 0}
 .kv b{display:block;font:400 13px var(--f-body);color:var(--muted)}
 .kv b .nc{text-transform:none}
@@ -119,11 +114,11 @@ main{display:flex;flex-direction:column;gap:20px;min-width:0}
 .kv.verdict span.v{font-size:27px;line-height:1.15}
 .kv.verdict.good span.v{color:var(--pass)}
 .kv.status{grid-column:1/-1;border-bottom:0}
-.screen{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden;min-width:0}
+.screen{background:var(--surface);border:1px solid var(--line);border-radius:0;overflow:hidden;min-width:0}
 .bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:10px 14px;border-bottom:1px solid var(--line)}
 .bar h2{font:600 18px var(--f-display);margin:0 auto 0 0;letter-spacing:.01em}
-.tabs{display:flex;gap:3px;background:var(--sunk);border-radius:7px;padding:3px;overflow-x:auto;max-width:100%;scrollbar-width:none}
-.tab{font:600 14px var(--f-body);border:0;border-radius:5px;padding:7px 12px;background:transparent;color:var(--muted);cursor:pointer;white-space:nowrap}
+.tabs{display:flex;gap:3px;background:var(--sunk);border-radius:0;padding:3px;overflow-x:auto;max-width:100%;scrollbar-width:none}
+.tab{font:600 14px var(--f-body);border:0;border-radius:0;padding:7px 12px;background:transparent;color:var(--muted);cursor:pointer;white-space:nowrap}
 .tab:hover{color:var(--ink)}
 .tab[aria-selected=true]{background:var(--surface);color:var(--ink);box-shadow:0 0 0 1px var(--line)}
 .viewbar{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;padding:9px 14px;border-bottom:1px solid var(--line)}
@@ -149,7 +144,7 @@ main{display:flex;flex-direction:column;gap:20px;min-width:0}
 #viewExtra:empty{display:none}
 #viewExtra .interp{font-size:13.5px;color:var(--muted);max-width:120ch;margin:-4px 2px 0}
 #viewExtra .interp strong{color:var(--ink);font-weight:600}
-#viewExtra .busyline{font-size:14px;color:var(--warn);margin:0;padding:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+#viewExtra .busyline{font-size:14px;color:var(--warn);margin:0;padding:14px;background:var(--surface);border:1px solid var(--line);border-radius:0}
 .warnline{font-size:13.5px;color:var(--warn);margin:0;padding:9px 14px;border-bottom:1px solid var(--line)}
 details.fold>summary{list-style:none;cursor:pointer;user-select:none}
 details.fold>summary::-webkit-details-marker{display:none}
@@ -174,7 +169,7 @@ td.mono{font-variant-numeric:tabular-nums}
 td strong{font-weight:600}
 .dl.warn{color:var(--warn)} .dl.bad{color:var(--fail);font-weight:600}
 /* status: a pass is quiet, a fail is loud */
-.pill{display:inline-block;font:600 13px var(--f-body);border-radius:4px}
+.pill{display:inline-block;font:600 13px var(--f-body);border-radius:0}
 .pill.pass{color:var(--pass)}
 .pill.fail{background:var(--fail);color:#fff;padding:1px 8px}
 .pill.na{color:var(--info);font-weight:400}
@@ -183,8 +178,7 @@ td strong{font-weight:600}
 details.method .mb{padding:4px 14px 14px;display:grid;gap:10px}
 details.method .mb p{margin:0;font-size:13.5px;color:var(--muted);max-width:120ch}
 details.method .mb strong{color:var(--ink);font-weight:600}
-footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);padding-top:10px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px}
-.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--surface);padding:8px 14px;border-radius:6px;font-size:13.5px;z-index:50;max-width:calc(100% - 32px)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--surface);padding:8px 14px;border-radius:0;font-size:13.5px;z-index:50;max-width:calc(100% - 32px)}
 
 @media (max-width:1180px){
   .summary{grid-template-columns:repeat(4,minmax(0,1fr))}
@@ -194,7 +188,7 @@ footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);paddin
   .bench{grid-template-columns:minmax(0,1fr)}
   aside{position:static;max-height:none;overflow:visible}
   .rail-body{overflow:visible}
-  .rail-foot{position:sticky;bottom:0;border-radius:0 0 10px 10px;z-index:2;padding-bottom:max(12px,env(safe-area-inset-bottom,0px))}
+  .rail-foot{position:sticky;bottom:0;z-index:2;padding-bottom:max(12px,env(safe-area-inset-bottom,0px))}
 }
 @media (max-width:640px){
   body{font-size:16px}
@@ -208,19 +202,67 @@ footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);paddin
   td,th{padding-inline:10px}
 }
 @media (prefers-reduced-motion:reduce){.chev,details.sec>summary::before{transition:none}}
+
+/* ---------- beamKit integration ---------- */
+body{font-size:14px}
+.wrap.app{max-width:var(--page-max,1584px);margin:0 auto;display:flex;flex-direction:column;gap:16px;
+  padding:16px max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px))}
+input,select{background:var(--sunk);border:0;border-bottom:1px solid var(--cds-border-strong,#8d8d8d)}
+input[type=checkbox],input[type=radio],input[type=range],input[type=file]{border:0;background:none}
+input[type=number]{font-family:var(--f-mono);font-size:13px}
+input:hover,select:hover{background:var(--cds-layer-hover-01,#f7f9fc)}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--cds-focus,#0f62fe);outline-offset:-2px}
+.btn{min-height:32px}
+.btn.primary:hover{filter:none;background:var(--cds-button-primary-hover,#0353e9)}
+.seg{border:0}
+.seg button+button{border-left:0}
+.drop{margin:0}
+.legend{margin:0}
+.st{font-family:var(--f-display);text-transform:uppercase;letter-spacing:.06em;font-size:13px!important;color:var(--muted)}
+.kv b{text-transform:uppercase;letter-spacing:.06em;font-size:11.5px}
+details.fold[open]>summary .chev,details.json[open]>summary .chev,details.sec[open]>summary .chev{transform:rotate(45deg) translate(-2px,-2px)}
+footer.bk a{color:var(--cds-link-primary)}
+th.num{font-family:var(--f-body)}
+.chip.ex,.chip.warn{color:var(--cds-info-text,#0043ce)}
+.chip.warn{background:var(--cds-warn-bg,#fcf4d6);color:var(--cds-warn-text,#8e6a00)}
+.btn.link{color:var(--cds-link-primary,#0f62fe);border-color:var(--cds-link-primary,#0f62fe)}
+.beam .beamdetail{color:var(--cds-link-primary,#0f62fe)}
+.tabs{background:none;padding:0;gap:0;margin:0;border-bottom:0}
+.tabs .tab[aria-selected=true]{background:none;box-shadow:none}
+.cnt{border-radius:12px}
 </style>
 </head>
 <body>
+<a class="skip" href="#results">Skip to results</a>
+<div class="shell">
+  <div class="wrap">
+    <a class="shell-name" href="https://jalibakthermk.github.io/"><img src="favicon.svg" alt="" width="24" height="24"> beamCorrelate <span class="crumb">· Jalib Akther</span></a>
+    <div class="shell-actions">
+      <a href="https://jalibakthermk.github.io/" title="All projects"><svg class="i"><use href="#icon-grid"/></svg> <span class="lbl">Projects</span></a>
+      <a href="https://github.com/jalibakthermk/beamCorrelate" title="Source code"><svg class="i"><use href="#icon-github"/></svg> <span class="lbl">Code</span></a>
+      <button type="button" data-bk-theme aria-label="Toggle light and dark theme" title="Toggle light / dark">
+        <svg class="i sun"><use href="#icon-sun"/></svg><svg class="i moon"><use href="#icon-moon"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
 
-<div class="wrap">
+<header class="titleband">
+  <svg class="motif" viewBox="0 0 640 200" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+    <ellipse cx="420" cy="140" rx="210" ry="56"/><ellipse cx="420" cy="140" rx="150" ry="40"/><ellipse cx="420" cy="140" rx="92" ry="25"/><ellipse cx="420" cy="140" rx="44" ry="12"/>
+    <path class="cut" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M0 140H330L366 104H640"/>
+  </svg>
+  <div class="wrap">
+    <p class="eyebrow">Lamps · photometry · simulation vs goniometer measurement</p>
+    <h1><b>beamCorrelate</b> Simulation vs measurement correlation</h1>
+    <p class="sub">Puts a simulated and a measured intensity distribution on one H-V grid, lines them up and shows where and by how much they differ: ratio, gamma, SSIM, contours, cut-off, calibration fit and test points.</p>
+    <span class="privacy"><svg class="i"><use href="#icon-lock"/></svg> Files are processed locally in your browser — nothing is uploaded.</span>
+  </div>
+</header>
+
+<div class="wrap app">
 <div class="bench">
 <aside aria-label="Correlation settings">
-  <header>
-    <div class="brand">
-      <svg class="logo" viewBox="0 0 48 48" aria-hidden="true"><defs><clipPath id="bcA"><path d="M2 25.5 H19.5 L27.5 19 H46 V46 H2 Z"/></clipPath><clipPath id="bcB"><path d="M2 22 H23.5 L31.5 15.5 H46 V46 H2 Z"/></clipPath></defs><rect x="1.5" y="1.5" width="45" height="45" rx="9" fill="#0d151d"/><g clip-path="url(#bcA)"><ellipse cx="21.5" cy="29.5" rx="19" ry="9.5" fill="#1c5c8c"/><ellipse cx="22.5" cy="29" rx="13" ry="6.6" fill="#179498"/><ellipse cx="23.5" cy="28.5" rx="8.4" ry="4.4" fill="#d6d046"/><ellipse cx="24" cy="28.1" rx="4.3" ry="2.5" fill="#e24e3a"/></g><g clip-path="url(#bcB)" fill="none" stroke="#9fd3ff" stroke-width="1.6"><ellipse cx="25.5" cy="25.5" rx="19" ry="9.5"/><ellipse cx="27.5" cy="24.6" rx="8.4" ry="4.4"/></g><path d="M4.5 25.5 H19.5 L27.5 19 H43.5" fill="none" stroke="#ffffff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.5 22 H23.5 L31.5 15.5 H43.5" fill="none" stroke="#9fd3ff" stroke-width="1.8" stroke-dasharray="3 2" stroke-linejoin="round"/></svg>
-      <div><h1>Beam Correlate</h1><p class="tag">Simulation vs. goniometer measurement</p></div>
-    </div>
-  </header>
   <div class="rail-body">
     <fieldset>
       <label class="f">Lamp function
@@ -324,7 +366,7 @@ footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);paddin
   </div>
 </aside>
 
-<main>
+<main id="results">
   <section class="summary" id="kpis" aria-label="Correlation summary" aria-live="polite"></section>
 
   <section class="screen" aria-label="Analysis views">
@@ -369,10 +411,16 @@ footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);paddin
 </main>
 </div>
 
-<footer>
-  <span>Correlation of simulated and goniometer-measured luminous intensity: alignment, scaling, ratio, gamma, contour, cut-off and calibration analyses.</span>
-  <span>Beam Correlate · © 2026 Jalib Akther</span>
-</footer>
+</div>
+<div class="wrap foot">
+  <footer class="bk">
+    <span>beamCorrelate</span>
+    <span>© 2026 Jalib Akther</span>
+    <span><svg class="i"><use href="#icon-pin"/></svg> Thrissur, India</span>
+    <a href="https://github.com/jalibakthermk/beamCorrelate">Source on GitHub</a>
+    <a href="https://jalibakthermk.github.io/">More lighting tools →</a>
+    <span class="disc">Results are engineering estimates; check them against measured data before relying on them.</span>
+  </footer>
 </div>
 <div class="toast" id="toast" hidden></div>
 
@@ -1490,11 +1538,11 @@ function baseLayout(c, extra){
   const ax = { gridcolor:c.line, zerolinecolor:c.dark ? 'rgba(199,212,222,.45)' : c.ink2, zerolinewidth:1, linecolor:c.line, tickcolor:c.line, ticks:'outside', tickfont:{ color:c.ink2, size:11.5 } };
   return Object.assign({
     paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:c.panel,
-    font:{ family:'Source Sans 3, Segoe UI, system-ui, sans-serif', size:12.5, color:c.ink },
+    font:{ family:'IBM Plex Sans, Segoe UI, system-ui, sans-serif', size:12.5, color:c.ink },
     margin:{ l:50, r:20, t:36, b:40 },
     xaxis:Object.assign({}, ax, w ? angTicks(w.hmin, w.hmax, 'R', 'L', 'V') : {}),
     yaxis:Object.assign({}, ax, w ? angTicks(w.vmin, w.vmax, 'U', 'D', 'H') : {}),
-    hoverlabel:{ font:{ family:'Source Sans 3, system-ui, sans-serif', size:13 } },
+    hoverlabel:{ font:{ family:'IBM Plex Sans, system-ui, sans-serif', size:13 } },
     modebar:{ bgcolor:'rgba(0,0,0,0)', color:c.ink2, activecolor:c.ink },
     showlegend:false
   }, extra || {});
@@ -2026,7 +2074,7 @@ ${im(cT, 'Cut-off line trace; dotted lines are the scan positions, diamonds the 
     ['Blur σ H / V', st.calRes && st.calFor === r ? `${st.calRes.sh.toFixed(3)}° / ${st.calRes.sv.toFixed(3)}°, stray light ${(st.calRes.haloPct + st.calRes.floorPct).toFixed(2)}% Imax` : '–']];
   const ptRows = r.pts.map(p => `<tr><td>${esc(p.name)}</td><td>${fmtPos(p.h, p.v)}</td><td>${fmtCd(p.m)}</td><td>${fmtCd(p.s)}</td><td>${fmtPct(p.delta)}</td><td>${limText(p)}</td><td class="${p.jm.st}">${p.jm.st}</td><td class="${p.js.st}">${p.js.st}</td></tr>`).join('');
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Correlation report: ${esc(st.sim.name)} vs ${esc(st.meas.name)}</title>
-<style>body{font-family:"Source Sans 3","Segoe UI",system-ui,sans-serif;color:#1B2025;max-width:1100px;margin:32px auto;padding:0 20px;font-size:14px;line-height:1.5}h1{font-size:24px;margin:0 0 4px}h2{font-size:16px;margin:28px 0 8px;border-bottom:1px solid #D6DBDD;padding-bottom:4px}.sub{color:#56616B;margin:0 0 18px}table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}td,th{border-bottom:1px solid #E3E6E8;padding:6px 8px;text-align:left;vertical-align:top}th{background:#F2F4F3;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:#56616B}.kv td:first-child{width:220px;color:#56616B}.pass{color:#22774A;font-weight:600}.fail{color:#B42318;font-weight:600}figure{margin:16px 0}img{max-width:100%;border:1px solid #E3E6E8}figcaption{font-size:12px;color:#56616B}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media print{h2{break-after:avoid}figure{break-inside:avoid}}</style></head><body>
+<style>body{font-family:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;color:#1B2025;max-width:1100px;margin:32px auto;padding:0 20px;font-size:14px;line-height:1.5}h1{font-size:24px;margin:0 0 4px}h2{font-size:16px;margin:28px 0 8px;border-bottom:1px solid #D6DBDD;padding-bottom:4px}.sub{color:#56616B;margin:0 0 18px}table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}td,th{border-bottom:1px solid #E3E6E8;padding:6px 8px;text-align:left;vertical-align:top}th{background:#F2F4F3;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:#56616B}.kv td:first-child{width:220px;color:#56616B}.pass{color:#22774A;font-weight:600}.fail{color:#B42318;font-weight:600}figure{margin:16px 0}img{max-width:100%;border:1px solid #E3E6E8}figcaption{font-size:12px;color:#56616B}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media print{h2{break-after:avoid}figure{break-inside:avoid}}</style></head><body>
 <h1>Beam Correlate · simulation vs measurement</h1><p class="sub">${esc(st.sim.name)} vs ${esc(st.meas.name)} · ${esc(FUNCS[st.func].label)} · generated ${stamp()}</p>
 <h2>Summary</h2><table class="kv">${kv.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}</table>
 <h2>Test points</h2><table><thead><tr><th>Point</th><th>Position</th><th>Measured cd</th><th>Simulated cd</th><th>Meas vs sim</th><th>Limit</th><th>Measured</th><th>Simulated</th></tr></thead><tbody>${ptRows || '<tr><td colspan="8">No test points defined.</td></tr>'}</tbody></table>
